@@ -6,7 +6,9 @@ from data_generation.data_generator import DataGenerator
 
 def main():
     # 1. Load the YAML Config
-    with open("data.yaml", "r") as f:
+    config_path = os.path.join("configs", "data.yaml")
+
+    with open(config_path, "r") as f:
         config = yaml.safe_load(f)
     
     data_cfg = config['data_params']
