@@ -41,3 +41,6 @@ def main():
     }, full_path)
     
     print(f"Dataset successfully saved to: {full_path}")
+
+if __name__ == "__main__":
+    main()
