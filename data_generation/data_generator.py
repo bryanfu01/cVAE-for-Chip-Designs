@@ -1,8 +1,8 @@
 import torch
 import numpy as np
 import yaml
-from legalizer import Discretizer
-from finite_solver import FiniteDifferenceSolver
+from core_engines.legalizer import Discretizer
+from core_engines.finite_solver import FiniteDifferenceSolver
 import random
 
 class DataGenerator:

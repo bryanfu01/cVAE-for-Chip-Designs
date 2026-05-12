@@ -2,7 +2,7 @@ import os
 import yaml
 import torch
 from tqdm import tqdm
-from data_generator import DataGenerator
+from data_generation.data_generator import DataGenerator
 
 def main():
     # 1. Load the YAML Config
