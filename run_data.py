@@ -35,7 +35,11 @@ def main():
         results = list(tqdm(executor.map(generate_single_chip, range(num_samples)), total=num_samples))
         
     # 3. Unpack the results
-    layouts, heat_maps = zip(*results)
+    layouts_np, heat_maps_np = zip(*results)
+
+    print("\nConverting arrays to PyTorch tensors and saving...")
+    layout_tensor = torch.stack([torch.from_numpy(l) for l in layouts_np])
+    heatmap_tensor = torch.stack([torch.from_numpy(h) for h in heat_maps_np])
         
     # 4. Save to Drive
     save_dir = config['logging_params']['save_path']
@@ -44,8 +48,8 @@ def main():
     
     os.makedirs(save_dir, exist_ok=True) 
     torch.save({
-        'layouts': torch.stack(layouts),
-        'heatmaps': torch.stack(heat_maps)
+        'layouts': layout_tensor,
+        'heatmaps': heatmap_tensor
     }, full_path)
     
     print(f"Dataset successfully saved to: {full_path}")

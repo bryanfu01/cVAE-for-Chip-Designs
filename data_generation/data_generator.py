@@ -60,7 +60,7 @@ class DataGenerator:
         valid_chip = torch.cat((valid_chip, pad_tensor), dim=1)
 
         # Need to ensure that tensors are on cpu instead of gpu for safety with multi-processing.
-        return (valid_chip, valid_heat_map.cpu())
+        return (valid_chip, valid_heat_map.cpu().numpy())
 
     def random_chips(self):
         num_macros = random.randint(self.macros_min, self.macros_max)
