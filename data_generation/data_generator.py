@@ -26,7 +26,7 @@ class DataGenerator:
         # 3. Unpack finite solver parameters
         self.k = solver_cfg['conductivity']
         self.iterations = solver_cfg['iterations']
-        self.tolerance = solver_cfg['tolerance']
+        self.tolerance = float(solver_cfg['tolerance'])
         
         # Safely evaluate the resolution if it was passed as a fraction string like '1/64'
         res_val = solver_cfg['resolution']

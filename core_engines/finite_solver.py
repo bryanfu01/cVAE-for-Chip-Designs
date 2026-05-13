@@ -49,8 +49,9 @@ class FiniteDifferenceSolver:
         for _ in range(self.iterations):
             T_padded = F.pad(T, (1, 1, 1, 1), mode='constant', value=0.0)
             T_new = F.conv2d(T_padded, self.K_avg) + P_scaled
-            if torch.max(torch.abs(T - T_new)) < self.tolerance:
+            if torch.max(torch.abs(T - T_new)).item() < self.tolerance:
                 return T_new
+            T = T_new
                        
         return T_new
 
