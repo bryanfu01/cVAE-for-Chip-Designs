@@ -10,7 +10,7 @@ data_params:
 finite_solver_params:
   conductivity: 148
   resolution: '1/64'
-  tolerance: 1.0e-5
+  tolerance: 0.0
   iterations: 500
 
 logging_params:
