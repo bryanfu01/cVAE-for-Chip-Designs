@@ -15,4 +15,4 @@ finite_solver_params:
 
 logging_params:
   save_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Chip_Layouts"
-  name: "Chip_Dataset"
+  name: "Chip_Dataset_2.0"
