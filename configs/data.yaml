@@ -1,8 +1,8 @@
 data_params:
   name: 'Real_Data'
-  num_macros: [10, 20]
-  widths_range: [10, 25]
-  heights_range: [10, 25]
+  num_macros: [10, 15]
+  widths_range: [10, 14]
+  heights_range: [10, 14]
   power_range: [10, 15]
   grid_size: [64, 64]
   num_samples: 50000

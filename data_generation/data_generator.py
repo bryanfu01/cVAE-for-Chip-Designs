@@ -41,8 +41,16 @@ class DataGenerator:
 
 
     def generate_valid_chip(self):
-        invalid_chip, power_vals = self.random_chips()
-        valid_chip = self.legalizer.make_discrete(macros=invalid_chip)
+        while True:
+            try:
+                invalid_chip, power_vals = self.random_chips()               
+                # If this fails, it jumps straight to the 'except' block below
+                valid_chip = self.legalizer.make_discrete(macros=invalid_chip)
+                break 
+                
+            except ValueError:
+                # The grid was too congested. Ignore it and loop back to the top.
+                pass
         valid_heat_map = self.finite_solver.simulate(macros=valid_chip, power_vals=power_vals)
 
         # Guarantees the chip layouts have the same shape. -1 indicates padding, not part of chip
