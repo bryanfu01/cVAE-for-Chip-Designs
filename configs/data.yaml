@@ -1,17 +1,18 @@
 data_params:
   name: 'Real_Data'
-  num_macros: 10
-  widths_range: [10, 15]
-  heights_range: [10, 15]
+  num_macros: [10, 20]
+  widths_range: [10, 25]
+  heights_range: [10, 25]
   power_range: [10, 15]
   grid_size: [64, 64]
-  num_samples: 10
+  num_samples: 50000
 
 finite_solver_params:
   conductivity: 148
   resolution: '1/64'
+  tolerance: 1e-5
   iterations: 500
 
 logging_params:
   save_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Chip_Layouts"
-  name: "Test_Run"
+  name: "Chip_Dataset"
