@@ -26,14 +26,15 @@ class VAEXperiment(pl.LightningModule):
         except:
             pass
 
-    def forward(self, input: Tensor, **kwargs) -> Tensor:
-        return self.model(input, **kwargs)
+    def forward(self, input: Tensor, condition: Tensor) -> Tensor:
+        # Equivalent to self.model.forward(input), but pytorch works better this way for backprop
+        return self.model(input, condition)
 
     def training_step(self, batch, batch_idx):
-        real_img, labels = batch
-        self.curr_device = real_img.device
+        layouts, heat_maps = batch
+        self.curr_device = layouts.device
 
-        results = self.forward(real_img, labels=labels)
+        results = self.forward(input=layouts, condition=heat_maps)
         train_loss = self.model.loss_function(*results,
                                               M_N=self.params['kld_weight'], 
                                               batch_idx=batch_idx)
@@ -63,7 +64,7 @@ class VAEXperiment(pl.LightningModule):
         test_label = test_label.to(self.curr_device)
 
 #         test_input, test_label = batch
-        recons = self.model.generate(test_input, labels = test_label)
+        recons = self.model.generate(test_input, condition = test_label)
         vutils.save_image(recons.data,
                           os.path.join(self.logger.log_dir , 
                                        "Reconstructions", 
@@ -72,9 +73,10 @@ class VAEXperiment(pl.LightningModule):
                           nrow=12)
 
         try:
-            samples = self.model.sample(144,
-                                        self.curr_device,
-                                        labels = test_label)
+            batch_size = test_input.size(0)
+            samples = self.model.sample(batch_size=batch_size,
+                                        current_device=self.curr_device,
+                                        conditions = test_label)
             vutils.save_image(samples.cpu().data,
                               os.path.join(self.logger.log_dir , 
                                            "Samples",      
@@ -86,42 +88,9 @@ class VAEXperiment(pl.LightningModule):
 
     def configure_optimizers(self):
 
-        optims = []
-        scheds = []
-
         optimizer = optim.Adam(self.model.parameters(),
                                lr=self.params['LR'],
                                weight_decay=self.params['weight_decay'])
-        optims.append(optimizer)
         
-        return optims
+        return optimizer
 
-        """
-        # Check if more than 1 optimizer is required (Used for adversarial training)
-        try:
-            if self.params['LR_2'] is not None:
-                optimizer2 = optim.Adam(getattr(self.model,self.params['submodel']).parameters(),
-                                        lr=self.params['LR_2'])
-                optims.append(optimizer2)
-        except:
-            pass
-
-        try:
-            if self.params['scheduler_gamma'] is not None:
-                scheduler = optim.lr_scheduler.ExponentialLR(optims[0],
-                                                             gamma = self.params['scheduler_gamma'])
-                scheds.append(scheduler)
-
-                # Check if another scheduler is required for the second optimizer
-                try:
-                    if self.params['scheduler_gamma_2'] is not None:
-                        scheduler2 = optim.lr_scheduler.ExponentialLR(optims[1],
-                                                                      gamma = self.params['scheduler_gamma_2'])
-                        scheds.append(scheduler2)
-                except:
-                    pass
-                return optims, scheds
-        except:
-            return optims
-
-        """
