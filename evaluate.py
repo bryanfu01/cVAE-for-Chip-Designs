@@ -130,7 +130,12 @@ def main():
     print(f"Legalization Failure Rate:        {failure_rate:.2f}% ({failed_legalizations} unsalvageable chips)")
 
     if vis_generated is not None:
-        plot_comparison(vis_original, vis_heatmap, vis_generated, grid_size=grid_w)
-
+        drive_path = "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/comparison.png"
+        
+        plot_comparison(vis_original, 
+                        vis_heatmap, 
+                        vis_generated, 
+                        grid_size=grid_w, 
+                        save_path=drive_path) # Pass the path here!
 if __name__ == "__main__":
     main()
