@@ -75,6 +75,17 @@ Path(f"{tb_logger.log_dir}/Reconstructions").mkdir(exist_ok=True, parents=True)
 print(f"======= Training {config['model_params']['name']} =======")
 
 # Start training, resuming safely from your Google Drive checkpoint
-runner.fit(experiment, 
-           datamodule=data, 
-           ckpt_path="/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/last.ckpt")
+expected_ckpt_path = os.path.join(
+    config['logging_params']['save_dir'], 
+    config['logging_params']['name'], 
+    "version_0", 
+    "checkpoints", 
+    "last.ckpt"
+)
+
+if os.path.exists(expected_ckpt_path):
+    print(f"Found existing checkpoint. Resuming from: {expected_ckpt_path}")
+    runner.fit(experiment, datamodule=data, ckpt_path=expected_ckpt_path)
+else:
+    print("No checkpoint found. Starting fresh training...")
+    runner.fit(experiment, datamodule=data)
