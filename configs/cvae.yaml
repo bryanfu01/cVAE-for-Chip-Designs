@@ -21,11 +21,15 @@ exp_params:
 trainer_params:
   accelerator: "gpu"  # Tells it to use the Colab T4
   devices: 1          # Tells it to use exactly 1 GPU
+  resume_ckpt_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/ConditionalVAE/version_4/checkpoints/last.ckpt"
   max_epochs: 100
 
 logging_params:
   save_dir: "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/"
   name: "Base_Training"
   
-
+eval_params:
+  # Swap this path when you want to evaluate different ablation models!
+  ckpt_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/ConditionalVAE/version_4/checkpoints/last.ckpt"
+  save_visualizations: True
   
