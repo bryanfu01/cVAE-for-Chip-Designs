@@ -27,7 +27,7 @@ def main():
 
     # 2. Load the Trained Model
     print("Loading model from checkpoint...")
-    ckpt_path = "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/last.ckpt"
+    ckpt_path = "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/ConditionalVAE/version_4/last.ckpt"
     
     # Initialize the base architecture
     base_model = ConditionalVAE(**config['model_params'])
