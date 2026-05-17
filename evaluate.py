@@ -57,6 +57,8 @@ def main():
     # 4. The Evaluation Loop
     total_overlap = 0.0
     total_displacement = 0.0
+    successful_legalizations = 0
+    failed_legalizations = 0
     
     with torch.no_grad():
         for batch_idx, (_, heat_maps, ground_truth_layouts) in enumerate(tqdm(test_loader)):
@@ -82,21 +84,41 @@ def main():
             # (Note: Because your legalizer currently takes a single chip at a time, 
             # you will need a quick list comprehension here to loop through the batch)
             post_legalized_boxes = []
+            valid_pre_legalized_boxes = []
             for i in range(batch_size):
-                legal_chip = legalizer.make_legal(pre_legalized_boxes[i])
-                post_legalized_boxes.append(legal_chip)
+                try:
+                    legal_chip = legalizer.make_legal(pre_legalized_boxes[i])
+                    post_legalized_boxes.append(legal_chip)
+                    valid_pre_legalized_boxes.append(pre_legalized_boxes[i])
+                except:
+                    failed_legalizations += 1
             
             post_legalized_boxes = torch.stack(post_legalized_boxes).to(device)
 
-            # E. Metric 2: Legalization Displacement
-            batch_displacement = calculate_displacement(pre_legalized_boxes, post_legalized_boxes)
-            total_displacement += batch_displacement.sum().item()
+# E. Metric 2: Legalization Displacement (Only on successful chips)
+            if len(post_legalized_boxes) > 0:
+                post_legalized_boxes = torch.stack(post_legalized_boxes).to(device)
+                valid_pre_legalized_boxes = torch.stack(valid_pre_legalized_boxes).to(device)
+
+                batch_displacement = calculate_displacement(valid_pre_legalized_boxes, post_legalized_boxes)
+                total_displacement += batch_displacement.sum().item()
+                
+                # Track how many chips we actually calculated displacement for
+                successful_legalizations += len(post_legalized_boxes)
 
     # 5. Print Final Results
     num_test_samples = len(test_loader.dataset)
+    failure_rate = (failed_legalizations / num_test_samples) * 100
+    
     print("\n=== Final Evaluation Metrics ===")
     print(f"Average Pre-Legalization Overlap: {total_overlap / num_test_samples:.2f} sq units/chip")
-    print(f"Average Legalizer Displacement:   {total_displacement / num_test_samples:.2f} units/macro")
+    
+    if successful_legalizations > 0:
+        print(f"Average Legalizer Displacement:   {total_displacement / successful_legalizations:.2f} units/macro")
+    else:
+        print("Average Legalizer Displacement:   N/A (All chips failed legalization)")
+        
+    print(f"Legalization Failure Rate:        {failure_rate:.2f}% ({failed_legalizations} unsalvageable chips)")
 
 if __name__ == "__main__":
     main()
