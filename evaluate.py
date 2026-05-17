@@ -59,7 +59,7 @@ def main():
     total_displacement = 0.0
     
     with torch.no_grad():
-        for batch_idx, (ground_truth_layouts, heat_maps) in enumerate(tqdm(test_loader)):
+        for batch_idx, (_, heat_maps, ground_truth_layouts) in enumerate(tqdm(test_loader)):
             heat_maps = heat_maps.to(device)
             ground_truth_layouts = ground_truth_layouts.to(device)
             batch_size = heat_maps.size(0)

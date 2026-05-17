@@ -31,7 +31,7 @@ class VAEXperiment(pl.LightningModule):
         return self.model(input, condition)
 
     def training_step(self, batch, batch_idx):
-        layouts, heat_maps = batch
+        layouts, heat_maps, _ = batch
         self.curr_device = layouts.device
 
         results = self.forward(input=layouts, condition=heat_maps)
@@ -44,7 +44,7 @@ class VAEXperiment(pl.LightningModule):
         return train_loss['loss']
 
     def validation_step(self, batch, batch_idx):
-        layouts, heat_maps = batch
+        layouts, heat_maps, _ = batch
         self.curr_device = layouts.device
 
         results = self.forward(layouts, condition=heat_maps)
@@ -59,7 +59,7 @@ class VAEXperiment(pl.LightningModule):
         
     def sample_images(self):
         # Get sample reconstruction image            
-        test_input, test_label = next(iter(self.trainer.datamodule.test_dataloader()))
+        test_input, test_label, _ = next(iter(self.trainer.datamodule.test_dataloader()))
         test_input = test_input.to(self.curr_device)
         test_label = test_label.to(self.curr_device)
 

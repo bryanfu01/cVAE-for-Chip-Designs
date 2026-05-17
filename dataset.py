@@ -50,7 +50,7 @@ class ChipDataset(Dataset):
             # Map the rigid boundary to the continuous spatial density tensor
             rasterized_layout[i, y_start:y_end, x_start:x_end] = 1.0
 
-        return rasterized_layout, heatmap 
+        return rasterized_layout, heatmap, layout_coords
 
 class VAEDataset(LightningDataModule):
     def __init__(
