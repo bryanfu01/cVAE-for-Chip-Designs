@@ -44,10 +44,10 @@ class VAEXperiment(pl.LightningModule):
         return train_loss['loss']
 
     def validation_step(self, batch, batch_idx):
-        real_img, labels = batch
-        self.curr_device = real_img.device
+        layouts, heat_maps = batch
+        self.curr_device = layouts.device
 
-        results = self.forward(real_img, labels=labels)
+        results = self.forward(layouts, condition=heat_maps)
         val_loss = self.model.loss_function(*results,
                                             M_N=1.0, 
                                             batch_idx=batch_idx)
@@ -74,7 +74,7 @@ class VAEXperiment(pl.LightningModule):
 
         try:
             batch_size = test_input.size(0)
-            samples = self.model.sample(batch_size=batch_size,
+            samples = self.model.sample(num_samples=batch_size,
                                         current_device=self.curr_device,
                                         conditions = test_label)
             vutils.save_image(samples.cpu().data,
