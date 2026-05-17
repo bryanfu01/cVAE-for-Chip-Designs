@@ -5,7 +5,7 @@ model_params:
 
 
 data_params:
-  data_path: "x-ray_data"
+  data_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Chip_Layouts/Chip_Dataset_2.0.pt"
   train_batch_size: 64
   val_batch_size:  64
   patch_size: 64
@@ -13,11 +13,10 @@ data_params:
 
 
 exp_params:
-  LR: 0.005
+  LR: 0.001
   weight_decay: 0.0
-  scheduler_gamma: 0.95
   kld_weight: 0.00025
-  manual_seed: 1265
+  manual_seed: 42
 
 trainer_params:
   accelerator: "gpu"  # Tells it to use the Colab T4
@@ -25,8 +24,8 @@ trainer_params:
   max_epochs: 100
 
 logging_params:
-  save_dir: "/content/drive/MyDrive/VAE_Logs/" 
-  name: "VanillaVAE"
+  save_dir: "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/"
+  name: "Base_Training"
   
 
   
