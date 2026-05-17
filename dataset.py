@@ -26,7 +26,7 @@ class ChipDataset(Dataset):
 
     def __getitem__(self, idx):
         layout_coords = self.layouts[idx]
-        heatmap = self.heatmaps[idx]
+        heatmap = self.heatmaps[idx].squeeze(0)
         
         # 2. Create a blank Cx64x64 continuous density grid
         num_macros = layout_coords.shape[1]
