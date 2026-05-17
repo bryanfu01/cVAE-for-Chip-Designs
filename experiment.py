@@ -77,7 +77,7 @@ class VAEXperiment(pl.LightningModule):
             batch_size = test_input.size(0)
             samples = self.model.sample(num_samples=batch_size,
                                         current_device=self.curr_device,
-                                        conditions = test_label)
+                                        condition = test_label)
             samples_vis = samples.cpu().data.sum(dim=1, keepdim=True)
             vutils.save_image(samples_vis,
                               os.path.join(self.logger.log_dir , 
