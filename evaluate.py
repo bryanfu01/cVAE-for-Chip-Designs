@@ -92,8 +92,6 @@ def main():
                     valid_pre_legalized_boxes.append(pre_legalized_boxes[i])
                 except:
                     failed_legalizations += 1
-            
-            post_legalized_boxes = torch.stack(post_legalized_boxes).to(device)
 
 # E. Metric 2: Legalization Displacement (Only on successful chips)
             if len(post_legalized_boxes) > 0:
