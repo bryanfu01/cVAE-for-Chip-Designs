@@ -11,6 +11,7 @@ from core_engines.legalizer import Legalizer
 from evaluation_metrics.overlap import calculate_exact_overlap
 from evaluation_metrics.displacement import calculate_displacement
 from evaluation_metrics.discretizer import extract_center_of_mass
+from evaluation_metrics.visualize import plot_comparison
 
 def main():
     # 1. Setup Device and Config
@@ -59,6 +60,10 @@ def main():
     total_displacement = 0.0
     successful_legalizations = 0
     failed_legalizations = 0
+
+    vis_original = None
+    vis_heatmap = None
+    vis_generated = None
     
     with torch.no_grad():
         for batch_idx, (_, heat_maps, ground_truth_layouts) in enumerate(tqdm(test_loader)):
@@ -90,6 +95,12 @@ def main():
                     legal_chip = legalizer.make_legal(pre_legalized_boxes[i])
                     post_legalized_boxes.append(legal_chip)
                     valid_pre_legalized_boxes.append(pre_legalized_boxes[i])
+
+                    if vis_generated is None:
+                        vis_generated = legal_chip
+                        vis_original = ground_truth_layouts[i]
+                        vis_heatmap = heat_maps[i]
+
                 except:
                     failed_legalizations += 1
 
@@ -117,6 +128,9 @@ def main():
         print("Average Legalizer Displacement:   N/A (All chips failed legalization)")
         
     print(f"Legalization Failure Rate:        {failure_rate:.2f}% ({failed_legalizations} unsalvageable chips)")
+
+    if vis_generated is not None:
+        plot_comparison(vis_original, vis_heatmap, vis_generated, grid_size=grid_w)
 
 if __name__ == "__main__":
     main()
