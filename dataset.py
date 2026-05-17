@@ -28,8 +28,9 @@ class ChipDataset(Dataset):
         layout_coords = self.layouts[idx]
         heatmap = self.heatmaps[idx]
         
-        # 2. Create a blank 1x64x64 continuous density grid
-        rasterized_layout = torch.zeros((1, self.grid_size, self.grid_size))
+        # 2. Create a blank Cx64x64 continuous density grid
+        num_macros = layout_coords.shape[1]
+        rasterized_layout = torch.zeros((num_macros, self.grid_size, self.grid_size))
         
         # 3. Draw the macros onto the grid
         num_macros = layout_coords.shape[1]
@@ -47,7 +48,7 @@ class ChipDataset(Dataset):
             y_end = min(self.grid_size, int(round(cy + h/2)))
             
             # Map the rigid boundary to the continuous spatial density tensor
-            rasterized_layout[0, y_start:y_end, x_start:x_end] = 1.0
+            rasterized_layout[i, y_start:y_end, x_start:x_end] = 1.0
 
         return rasterized_layout, heatmap 
 

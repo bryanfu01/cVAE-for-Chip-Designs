@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from torch import Tensor
 
-class Discretizer():
+class Legalizer():
     def __init__(self, grid_shape: tuple) -> None:
         """
         macros: Tensor of shape (4, C). 
@@ -11,7 +11,7 @@ class Discretizer():
         """
         self.H, self.W = grid_shape
 
-    def make_discrete(self, macros: Tensor) -> Tensor:
+    def make_legal(self, macros: Tensor) -> Tensor:
         areas = macros[2, :] * macros[3, :]
         sorted_indices = torch.argsort(areas, descending=True)
         self.sorted_macros = macros[:, sorted_indices]

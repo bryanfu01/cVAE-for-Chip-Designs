@@ -22,11 +22,25 @@ parser.add_argument('--config',  '-c',
                     default='configs/vae.yaml')
 
 args = parser.parse_args()
+
+# 1. Load the VAE config
 with open(args.filename, 'r') as file:
-    try:
-        config = yaml.safe_load(file)
-    except yaml.YAMLError as exc:
-        print(exc)
+    config = yaml.safe_load(file)
+
+# 2. Load the Data config to sync parameters dynamically
+data_config_path = os.path.join("configs", "data.yaml")
+with open(data_config_path, "r") as f:
+    data_config = yaml.safe_load(f)
+
+# 3. Calculate dynamic channel sizes
+# num_macros is a list like [10, 15], so index 1 is the max!
+max_macros = data_config['data_params']['num_macros'][1] 
+
+# Encoder: max_macros (for layout channels) + 1 (for the heat map condition)
+config['model_params']['in_channels'] = max_macros + 1
+
+# Decoder: needs to output exactly the number of macros
+config['model_params']['out_channels'] = max_macros
 
 tb_logger = TensorBoardLogger(save_dir=config['logging_params']['save_dir'],
                                name=config['model_params']['name'])
@@ -63,4 +77,4 @@ print(f"======= Training {config['model_params']['name']} =======")
 # Start training, resuming safely from your Google Drive checkpoint
 runner.fit(experiment, 
            datamodule=data, 
-           ckpt_path="/content/drive/MyDrive/VAE_Checkpoints/last.ckpt")
+           ckpt_path="/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/last.ckpt")

@@ -1,7 +1,7 @@
 model_params:
   name: 'ConditionalVAE'
-  in_channels: 2
   latent_dim: 128
+
 
 
 data_params:

@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import yaml
-from core_engines.legalizer import Discretizer
+from core_engines.legalizer import Legalizer
 from core_engines.finite_solver import FiniteDifferenceSolver
 import random
 
@@ -32,7 +32,7 @@ class DataGenerator:
         res_val = solver_cfg['resolution']
         self.dx = eval(res_val) if isinstance(res_val, str) else res_val
 
-        self.legalizer = Discretizer(grid_shape=(self.grid_h, self.grid_w))
+        self.legalizer = Legalizer(grid_shape=(self.grid_h, self.grid_w))
         self.finite_solver = FiniteDifferenceSolver(grid_shape=(self.grid_h,self.grid_w), 
                                                     k_conductivity=self.k,
                                                     dx=self.dx,
@@ -45,7 +45,7 @@ class DataGenerator:
             try:
                 invalid_chip, power_vals = self.random_chips()               
                 # If this fails, it jumps straight to the 'except' block below
-                valid_chip = self.legalizer.make_discrete(macros=invalid_chip)
+                valid_chip = self.legalizer.make_legal(macros=invalid_chip)
                 break 
                 
             except ValueError:
