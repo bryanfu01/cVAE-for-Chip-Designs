@@ -19,6 +19,7 @@ class ChipDataset(Dataset):
         data = torch.load(pt_file_path)
         self.layouts = data['layouts']
         self.heatmaps = data['heatmaps']
+        self.powers = data['powers']
         self.grid_size = 64
 
     def __len__(self):
@@ -27,6 +28,7 @@ class ChipDataset(Dataset):
     def __getitem__(self, idx):
         layout_coords = self.layouts[idx]
         heatmap = self.heatmaps[idx].squeeze(0)
+        power_vals = self.powers[idx]
         
         # 2. Create a blank Cx64x64 continuous density grid
         num_macros = layout_coords.shape[1]
@@ -50,7 +52,7 @@ class ChipDataset(Dataset):
             # Map the rigid boundary to the continuous spatial density tensor
             rasterized_layout[i, y_start:y_end, x_start:x_end] = 1.0
 
-        return rasterized_layout, heatmap, layout_coords
+        return rasterized_layout, heatmap, layout_coords, power_vals
 
 class VAEDataset(LightningDataModule):
     def __init__(

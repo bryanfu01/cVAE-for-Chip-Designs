@@ -59,8 +59,11 @@ class DataGenerator:
         pad_tensor = -1*torch.ones([4,pad_size])
         valid_chip = torch.cat((valid_chip, pad_tensor), dim=1)
 
+        padded_powers = power_vals + [-1.0] * pad_size
+        power_tensor = torch.tensor(padded_powers, dtype=torch.float32)
+
         # Need to ensure that tensors are on cpu instead of gpu for safety with multi-processing.
-        return (valid_chip.numpy(), valid_heat_map.cpu().numpy())
+        return (valid_chip.numpy(), valid_heat_map.cpu().numpy(), power_tensor.numpy())
 
     def random_chips(self):
         num_macros = random.randint(self.macros_min, self.macros_max)

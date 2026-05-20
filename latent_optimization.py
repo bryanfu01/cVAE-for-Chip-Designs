@@ -1,6 +1,6 @@
 import torch
 
-def optimize_latent_space(model, condition, z, lso_steps=50, lr=0.05):
+def optimize_latent_space(model, condition, z, ground_truth_powers, lso_steps=50, lr=0.05):
     """
     Refines the latent vector z using gradients from differentiable physics penalties.
     """
