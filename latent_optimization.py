@@ -28,7 +28,7 @@ def optimize_latent_space(model, condition, z, ground_truth_powers=None, lso_ste
         
         # --- UNIFIED DIFFERENTIABLE PHYSICS ---
         # Call the exact same SoftDRC module used in experiment.py!
-        drc_metrics = drc_evaluator(continuous_layouts, condition)
+        drc_metrics = drc_evaluator(continuous_layouts, condition, ground_truth_powers)
         total_penalty = drc_metrics['total_drc_loss']
         
         # Backpropagate to z

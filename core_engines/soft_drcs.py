@@ -44,13 +44,13 @@ class SoftDRC(nn.Module):
         # Mean Squared Error against the expected target area
         return F.mse_loss(macro_masses, torch.full_like(macro_masses, self.target_area))
 
-    def _calculate_thermal_penalty(self, continuous_layouts: torch.Tensor, target_heatmaps: torch.Tensor) -> torch.Tensor:
+    def _calculate_thermal_penalty(self, continuous_layouts: torch.Tensor, target_heatmaps: torch.Tensor, macro_powers: torch.Tensor) -> torch.Tensor:
         """
         Calculates the Physics Force (Thermal Dispersion).
-        Penalizes layouts that place continuous macro density in cold regions 
-        of the target heatmap.
+        Penalizes layouts that place continuous macro density in cold regions,
+        weighted heavily by the actual power output of the specific macro.
         """
-        B = continuous_layouts.size(0)
+        B, C, H, W = continuous_layouts.shape
         
         # Normalize the heatmap to [0, 1] for stable gradient scaling
         heatmap_max = target_heatmaps.view(B, -1).max(dim=1)[0].view(B, 1, 1, 1)
@@ -60,12 +60,18 @@ class SoftDRC(nn.Module):
         # Calculate the inverse heatmap (1.0 = cold, 0.0 = hot)
         inverse_heatmaps = 1.0 - normalized_heatmaps
         
-        # Multiply macro layout density by the inverse heatmap 
-        thermal_penalty = continuous_layouts * inverse_heatmaps
+        # NEW: Reshape the power tensor for spatial broadcasting (B, C) -> (B, C, 1, 1)
+        # We replace the -1 padding with 0 so padded macros don't contribute to the penalty
+        safe_powers = torch.where(macro_powers == -1.0, torch.zeros_like(macro_powers), macro_powers)
+        power_weights = safe_powers.view(B, C, 1, 1)
+        
+        # Multiply layout density by its specific power, then by the inverse heatmap
+        # High-power macros in cold spots will generate massive gradient penalties!
+        thermal_penalty = (continuous_layouts * power_weights) * inverse_heatmaps
         
         return thermal_penalty.mean()
 
-    def forward(self, continuous_layouts: torch.Tensor, target_heatmaps: torch.Tensor) -> dict:
+    def forward(self, continuous_layouts: torch.Tensor, target_heatmaps: torch.Tensor, macro_powers: torch.Tensor) -> dict:
         """
         Executes the forward pass by aggregating all continuous physical constraints.
         
@@ -76,7 +82,7 @@ class SoftDRC(nn.Module):
         # 1. Calculate individual unweighted losses
         overlap_loss = self._calculate_overlap_penalty(continuous_layouts)
         area_loss = self._calculate_area_penalty(continuous_layouts)
-        thermal_loss = self._calculate_thermal_penalty(continuous_layouts, target_heatmaps)
+        thermal_loss = self._calculate_thermal_penalty(continuous_layouts, target_heatmaps, macro_powers)
 
         # 2. Apply hyperparameter weights
         weighted_overlap = self.overlap_weight * overlap_loss
