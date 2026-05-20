@@ -22,8 +22,8 @@ exp_params:
     thermal_weight: 10.0
 
 trainer_params:
-  accelerator: "gpu"  # Tells it to use the Colab T4
-  devices: 1          # Tells it to use exactly 1 GPU
+  accelerator: "tpu" 
+  devices: 1          
   resume_ckpt_path: null
   max_epochs: 100
 
