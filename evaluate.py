@@ -13,6 +13,7 @@ from evaluation_metrics.displacement import calculate_displacement
 from evaluation_metrics.discretizer import extract_center_of_mass
 from evaluation_metrics.visualize import plot_comparison
 from latent_optimization import optimize_latent_space
+from core_engines.soft_drcs import SoftDRC
 
 def main():
     # 1. Setup Device and Configs
@@ -52,6 +53,12 @@ def main():
                                            dx=eval(data_config['finite_solver_params']['resolution']),
                                            tolerance=data_config['finite_solver_params']['tolerance'],
                                            iterations=data_config['finite_solver_params']['iterations'])
+    
+    drc_evaluator = SoftDRC(
+        overlap_weight=config['soft_drc_params']['overlap_weight'], 
+        area_weight=config['soft_drc_params']['area_weight'], 
+        thermal_weight=config['soft_drc_params']['thermal_weight']
+    )
 
     print("Beginning evaluation...")
     
@@ -73,8 +80,15 @@ def main():
 
         # B. Latent Space Optimization (Requires Gradients)
         if use_lso:
-            z = optimize_latent_space(experiment.model, heat_maps, z, ground_truth_powers, lso_steps, lso_lr)
-
+            z = optimize_latent_space(
+                model=experiment.model, 
+                condition=heat_maps, 
+                z=z, 
+                ground_truth_powers=ground_truth_powers, 
+                lso_steps=lso_steps, 
+                lr=lso_lr,
+                drc_evaluator=drc_evaluator
+            )
         # C. Discretization & Metrics (Freeze gradients to save RAM!)
         with torch.no_grad():
             flat_condition = heat_maps.view(batch_size, -1)

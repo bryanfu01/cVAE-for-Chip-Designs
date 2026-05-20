@@ -1,13 +1,18 @@
 import torch
+from core_engines.soft_drcs import SoftDRC
 
-def optimize_latent_space(model, condition, z, ground_truth_powers, lso_steps=50, lr=0.05):
+def optimize_latent_space(model, condition, z, ground_truth_powers=None, lso_steps=50, lr=0.05, drc_evaluator=None):
     """
-    Refines the latent vector z using gradients from differentiable physics penalties.
+    Refines the latent vector z using gradients from the unified SoftDRC physics penalties.
     """
-    # 1. Detach z and explicitly tell PyTorch we want to train it
+    # 1. Initialize the shared physics evaluator if one isn't provided
+    if drc_evaluator is None:
+        drc_evaluator = SoftDRC()
+
+    # 2. Detach z and explicitly tell PyTorch we want to train it
     z = z.clone().detach().requires_grad_(True)
     
-    # 2. Setup an optimizer specifically for this single vector
+    # 3. Setup an optimizer specifically for this single vector
     optimizer = torch.optim.Adam([z], lr=lr)
     
     # Flatten condition once
@@ -19,16 +24,15 @@ def optimize_latent_space(model, condition, z, ground_truth_powers, lso_steps=50
         
         # Decode the current z
         decoder_input = torch.cat([z, flat_condition], dim=1)
-        continuous_layout = model.decode(decoder_input)
+        continuous_layouts = model.decode(decoder_input)
         
-        # --- CALCULATE DIFFERENTIABLE LOSSES HERE ---
-        # Example: Soft Overlap Penalty (You will insert your Soft DRC math here)
-        # We want to push z in a direction that minimizes overlapping probability clouds
-        density_sum = continuous_layout.sum(dim=1) # Sum all macros
-        overlap_penalty = torch.nn.functional.relu(density_sum - 1.0).sum()
+        # --- UNIFIED DIFFERENTIABLE PHYSICS ---
+        # Call the exact same SoftDRC module used in experiment.py!
+        drc_metrics = drc_evaluator(continuous_layouts, condition)
+        total_penalty = drc_metrics['total_drc_loss']
         
         # Backpropagate to z
-        overlap_penalty.backward()
+        total_penalty.backward()
         optimizer.step()
         
     return z.detach()

@@ -2,15 +2,12 @@ model_params:
   name: 'ConditionalVAE'
   latent_dim: 128
 
-
-
 data_params:
-  data_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Chip_Layouts/Chip_Dataset_2.0.pt"
+  data_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Chip_Layouts/Chip_Dataset_3.0.pt"
   train_batch_size: 64
   val_batch_size:  64
   patch_size: 64
   num_workers: 2
-
 
 exp_params:
   LR: 0.001
@@ -18,14 +15,20 @@ exp_params:
   kld_weight: 0.00025
   manual_seed: 42
 
+  soft_drc_params:
+    use_soft_drc: False
+    overlap_weight: 50.0
+    area_weight: 20.0
+    thermal_weight: 10.0
+
 trainer_params:
   accelerator: "gpu"  # Tells it to use the Colab T4
   devices: 1          # Tells it to use exactly 1 GPU
-  resume_ckpt_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/ConditionalVAE/version_4/checkpoints/last.ckpt"
+  resume_ckpt_path: null
   max_epochs: 100
 
 logging_params:
   save_dir: "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/"
-  name: "Base_Training"
+  name: "Base_Training_3.0"
 
   

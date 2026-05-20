@@ -8,6 +8,7 @@ import pytorch_lightning as pl
 from torchvision import transforms
 import torchvision.utils as vutils
 from torch.utils.data import DataLoader
+from core_engines.soft_drcs import SoftDRC
 
 
 class VAEXperiment(pl.LightningModule):
@@ -25,6 +26,12 @@ class VAEXperiment(pl.LightningModule):
             self.hold_graph = self.params['retain_first_backpass']
         except:
             pass
+        self.soft_drc_evaluator = SoftDRC(
+            overlap_weight=self.params.get('overlap_weight', 50.0),
+            area_weight=self.params.get('area_weight', 20.0),
+            thermal_weight=self.params.get('thermal_weight', 10.0),
+            target_area=self.params.get('target_area', 100.0) # E.g., for a 10x10 footprint
+        )
 
     def forward(self, input: Tensor, condition: Tensor) -> Tensor:
         # Equivalent to self.model.forward(input), but pytorch works better this way for backprop
@@ -40,6 +47,13 @@ class VAEXperiment(pl.LightningModule):
                                               batch_idx=batch_idx)
 
         self.log_dict({key: val.item() for key, val in train_loss.items()}, sync_dist=True)
+
+        if self.params.get('use_soft_drc', False):
+            drc_metrics = self.soft_drc_evaluator(results[0], heat_maps)
+            train_loss['loss'] = train_loss['loss'] + drc_metrics['total_drc_loss']
+            
+            # Merge the isolated metrics for TensorBoard tracking
+            train_loss.update({k: v for k, v in drc_metrics.items() if k != 'total_drc_loss'})
 
         return train_loss['loss']
 

@@ -1,0 +1,95 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class SoftDRC(nn.Module):
+    def __init__(self, 
+                 overlap_weight: float = 50.0, 
+                 area_weight: float = 20.0, 
+                 thermal_weight: float = 10.0,
+                 target_area: float = 100.0): 
+        """
+        Differentiable Physics Penalties for Continuous Chip Layouts.
+        """
+        super(SoftDRC, self).__init__()
+        self.overlap_weight = overlap_weight
+        self.area_weight = area_weight
+        self.thermal_weight = thermal_weight
+        
+        # The expected probability mass sum for a single macro channel
+        self.target_area = target_area
+
+    def _calculate_overlap_penalty(self, continuous_layouts: torch.Tensor) -> torch.Tensor:
+        """
+        Calculates the Exclusion Force (Overlap Penalty).
+        Penalizes pixels where the sum of probabilities across channels exceeds 1.0.
+        """
+        # Sum probabilities across all macro channels for each pixel
+        density_sum = continuous_layouts.sum(dim=1) # Shape: (B, H, W)
+        
+        # Penalize any pixel exceeding a total density of 1.0
+        overlap_error = F.relu(density_sum - 1.0)
+        
+        return (overlap_error ** 2).mean()
+
+    def _calculate_area_penalty(self, continuous_layouts: torch.Tensor) -> torch.Tensor:
+        """
+        Calculates the Inclusion Force (Mass Preservation).
+        Ensures each macro maintains its target area, preventing the model 
+        from erasing macros to avoid overlap penalties.
+        """
+        # Sum the total probability mass for each individual macro
+        macro_masses = continuous_layouts.sum(dim=(2, 3)) # Shape: (B, C)
+        
+        # Mean Squared Error against the expected target area
+        return F.mse_loss(macro_masses, torch.full_like(macro_masses, self.target_area))
+
+    def _calculate_thermal_penalty(self, continuous_layouts: torch.Tensor, target_heatmaps: torch.Tensor) -> torch.Tensor:
+        """
+        Calculates the Physics Force (Thermal Dispersion).
+        Penalizes layouts that place continuous macro density in cold regions 
+        of the target heatmap.
+        """
+        B = continuous_layouts.size(0)
+        
+        # Normalize the heatmap to [0, 1] for stable gradient scaling
+        heatmap_max = target_heatmaps.view(B, -1).max(dim=1)[0].view(B, 1, 1, 1)
+        heatmap_min = target_heatmaps.view(B, -1).min(dim=1)[0].view(B, 1, 1, 1)
+        normalized_heatmaps = (target_heatmaps - heatmap_min) / (heatmap_max - heatmap_min + 1e-8)
+        
+        # Calculate the inverse heatmap (1.0 = cold, 0.0 = hot)
+        inverse_heatmaps = 1.0 - normalized_heatmaps
+        
+        # Multiply macro layout density by the inverse heatmap 
+        thermal_penalty = continuous_layouts * inverse_heatmaps
+        
+        return thermal_penalty.mean()
+
+    def forward(self, continuous_layouts: torch.Tensor, target_heatmaps: torch.Tensor) -> dict:
+        """
+        Executes the forward pass by aggregating all continuous physical constraints.
+        
+        continuous_layouts: Shape (B, C, H, W)
+        target_heatmaps: Shape (B, 1, H, W)
+        """
+        
+        # 1. Calculate individual unweighted losses
+        overlap_loss = self._calculate_overlap_penalty(continuous_layouts)
+        area_loss = self._calculate_area_penalty(continuous_layouts)
+        thermal_loss = self._calculate_thermal_penalty(continuous_layouts, target_heatmaps)
+
+        # 2. Apply hyperparameter weights
+        weighted_overlap = self.overlap_weight * overlap_loss
+        weighted_area = self.area_weight * area_loss
+        weighted_thermal = self.thermal_weight * thermal_loss
+
+        # 3. Sum into the total Soft DRC loss
+        total_drc_loss = weighted_overlap + weighted_area + weighted_thermal
+
+        # 4. Return dictionary formatted for TensorBoard logging
+        return {
+            'total_drc_loss': total_drc_loss,
+            'Soft_Overlap_Loss': weighted_overlap.detach(),
+            'Soft_Area_Loss': weighted_area.detach(),
+            'Soft_Thermal_Loss': weighted_thermal.detach()
+        }
