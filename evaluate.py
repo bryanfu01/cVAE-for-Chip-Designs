@@ -16,10 +16,12 @@ from evaluation_metrics.visualize import plot_comparison
 def main():
     # 1. Setup Device and Config
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    with open("configs/cvae.yaml", 'r') as file:
-        config = yaml.safe_load(file)
-    with open("configs/data.yaml", "r") as f:
-        data_config = yaml.safe_load(f)
+    with open("configs/cvae.yaml", 'r') as file_1:
+        config = yaml.safe_load(file_1)
+    with open("configs/data.yaml", "r") as file_2:
+        data_config = yaml.safe_load(file_2)
+    with open("configs/eval.yaml", "r") as file_3:
+        eval_config = yaml.safe_load(file_3)
 
     # Calculate dynamic channels (just like in run.py)
     max_macros = data_config['data_params']['num_macros'][1]
@@ -28,7 +30,8 @@ def main():
 
     # 2. Load the Trained Model
     print("Loading model from checkpoint...")
-    ckpt_path = config['eval_params']['ckpt_path']
+    ckpt_path = config["trainer_params"]["resume_ckpt_path"]
+    img_save_path = eval_config['saving_params']['img_path']
     
     # Initialize the base architecture
     base_model = ConditionalVAE(**config['model_params'])
@@ -130,12 +133,10 @@ def main():
     print(f"Legalization Failure Rate:        {failure_rate:.2f}% ({failed_legalizations} unsalvageable chips)")
 
     if vis_generated is not None:
-        drive_path = "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/comparison.png"
-        
         plot_comparison(vis_original, 
                         vis_heatmap, 
                         vis_generated, 
                         grid_size=grid_w, 
-                        save_path=drive_path) # Pass the path here!
+                        save_path=img_save_path) # Pass the path here!
 if __name__ == "__main__":
     main()

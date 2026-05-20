@@ -1,0 +1,14 @@
+saving_params:
+  # Swap this path when you want to evaluate different ablation models!
+  img_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/comparison.png"
+        
+  result_path: 
+  save_visualizations: True
+
+latent_optim:
+  use_lso: False
+  steps: 50
+  lr: 0.05
+
+physics_params:
+  default: 12.5
