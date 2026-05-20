@@ -58,6 +58,7 @@ data = VAEDataset(**config["data_params"], pin_memory=use_gpu)
 
 data.setup()
 
+resume_path = config['trainer_params'].pop('resume_ckpt_path', None)
 # Trainer initialized without the deprecated DDPPlugin
 runner = Trainer(logger=tb_logger,
                  callbacks=[
@@ -75,7 +76,6 @@ Path(f"{tb_logger.log_dir}/Reconstructions").mkdir(exist_ok=True, parents=True)
 print(f"======= Training {config['model_params']['name']} =======")
 
 # Start training, resuming safely from your Google Drive checkpoint
-resume_path = config['trainer_params'].get('resume_ckpt_path', None)
 
 if resume_path:
     print(f"Resuming training from: {resume_path}")
