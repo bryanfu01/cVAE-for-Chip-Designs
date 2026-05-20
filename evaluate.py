@@ -93,12 +93,9 @@ def main():
                     post_legalized_boxes.append(legal_chip)
                     valid_pre_legalized_boxes.append(pre_legalized_boxes[i])
 
-                    # E. Thermal Performance Evaluation
-                    num_valid_macros = (legal_chip[0, :] != -1).sum().item()
-                    power_vals = [default_power] * num_valid_macros
-                    
+                    # E. Thermal Performance Evaluation               
                     # Simulate the heat map of the legalized chip
-                    simulated_heatmap = finite_solver.simulate(legal_chip.unsqueeze(0), power_vals)
+                    simulated_heatmap = finite_solver.simulate(legal_chip.unsqueeze(0), ground_truth_powers)
                     target_heatmap = heat_maps[i].unsqueeze(0).unsqueeze(0)
                     
                     thermal_mse = torch.nn.functional.mse_loss(simulated_heatmap, target_heatmap)
