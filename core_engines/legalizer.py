@@ -26,7 +26,11 @@ class Legalizer():
             anchored_macros.append(legal_mac)
 
         # Convert back to a (4, C) tensor to hand off to the physics solver
-        return torch.tensor(anchored_macros).T
+        unsorted_macros = [None] * num_macros
+        for sorted_idx, original_idx in enumerate(sorted_indices):
+            unsorted_macros[original_idx] = anchored_macros[sorted_idx]
+
+        return torch.tensor(unsorted_macros).T
 
     def spiral_search(self, anchored_macros: list, mac: list) -> list:
         cx, cy, h, w = mac

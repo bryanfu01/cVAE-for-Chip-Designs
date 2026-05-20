@@ -95,7 +95,8 @@ def main():
 
                     # E. Thermal Performance Evaluation               
                     # Simulate the heat map of the legalized chip
-                    simulated_heatmap = finite_solver.simulate(legal_chip.unsqueeze(0), ground_truth_powers)
+                    chip_powers = ground_truth_powers[i].tolist()
+                    simulated_heatmap = finite_solver.simulate(legal_chip.unsqueeze(0), chip_powers)
                     target_heatmap = heat_maps[i].unsqueeze(0).unsqueeze(0)
                     
                     thermal_mse = torch.nn.functional.mse_loss(simulated_heatmap, target_heatmap)

@@ -28,6 +28,9 @@ class FiniteDifferenceSolver:
         num_macros = macros.shape[1]
         for i in range(num_macros):
             cx, cy, h, w = macros[:, i]
+
+            if cx == -1:
+                continue
             
             x_start = max(0, int(round((cx - w/2).item())))
             x_end = min(self.W, int(round((cx + w/2).item())))
