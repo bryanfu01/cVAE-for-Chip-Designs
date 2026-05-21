@@ -22,7 +22,7 @@ exp_params:
     thermal_weight: 10.0
 
 trainer_params:
-  accelerator: "tpu" 
+  accelerator: "gpu" 
   devices: 1          
   resume_ckpt_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/ConditionalVAE/version_5/checkpoints/last.ckpt"
   max_epochs: 100
