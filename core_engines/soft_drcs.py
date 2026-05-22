@@ -15,6 +15,8 @@ class SoftDRC(nn.Module):
         self.overlap_weight = overlap_weight
         self.area_weight = area_weight
         self.thermal_weight = thermal_weight
+
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
         
         # The expected probability mass sum for a single macro channel
         self.target_area = target_area
@@ -67,7 +69,7 @@ class SoftDRC(nn.Module):
         
         # Multiply layout density by its specific power, then by the inverse heatmap
         # High-power macros in cold spots will generate massive gradient penalties!
-        thermal_penalty = (continuous_layouts * power_weights) * inverse_heatmaps
+        thermal_penalty = (continuous_layouts.to(self.device) * power_weights.to(self.device)) * inverse_heatmaps.to(self.device)
         
         return thermal_penalty.mean()
 
