@@ -53,13 +53,13 @@ def main():
                                            dx=eval(data_config['finite_solver_params']['resolution']),
                                            tolerance=data_config['finite_solver_params']['tolerance'],
                                            iterations=data_config['finite_solver_params']['iterations'])
-    
+    """
     drc_evaluator = SoftDRC(
         overlap_weight=config['soft_drc_params']['overlap_weight'], 
         area_weight=config['soft_drc_params']['area_weight'], 
         thermal_weight=config['soft_drc_params']['thermal_weight']
     )
-
+    """
     print("Beginning evaluation...")
     
     total_overlap = 0.0

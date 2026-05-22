@@ -15,11 +15,11 @@ exp_params:
   kld_weight: 0.00025
   manual_seed: 42
 
-  soft_drc_params:
-    use_soft_drc: False
-    overlap_weight: 50.0
-    area_weight: 20.0
-    thermal_weight: 10.0
+soft_drc_params:
+  use_soft_drc: False
+  overlap_weight: 50.0
+  area_weight: 20.0
+  thermal_weight: 10.0
 
 trainer_params:
   accelerator: "gpu" 
