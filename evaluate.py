@@ -87,7 +87,8 @@ def main():
                 ground_truth_powers=ground_truth_powers, 
                 lso_steps=lso_steps, 
                 lr=lso_lr,
-                drc_evaluator=drc_evaluator
+                drc_evaluator=drc_evaluator,
+                regulariztion=config["exp_params"]["kld_weights"]
             )
         # C. Discretization & Metrics (Freeze gradients to save RAM!)
         with torch.no_grad():
