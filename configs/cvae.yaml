@@ -3,7 +3,7 @@ model_params:
   latent_dim: 128
 
 data_params:
-  data_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Chip_Layouts/Chip_Dataset_3.0.pt"
+  data_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Chip_Layouts/Chip_Dataset_4.0.pt"
   train_batch_size: 64
   val_batch_size:  64
   patch_size: 64
@@ -22,9 +22,9 @@ soft_drc_params:
   thermal_weight: 4.0
 
 trainer_params:
-  accelerator: "gpu" 
+  accelerator: "tpu" 
   devices: 1          
-  resume_ckpt_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/ConditionalVAE/version_5/checkpoints/last.ckpt"
+  resume_ckpt_path: null
   max_epochs: 100
 
 logging_params:
