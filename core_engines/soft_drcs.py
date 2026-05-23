@@ -21,69 +21,36 @@ class SoftDRC(nn.Module):
         # The expected probability mass sum for a single macro channel
         self.target_area = target_area
 
-    def _calculate_overlap_penalty(self, continuous_layouts: torch.Tensor) -> torch.Tensor:
-        """
-        Calculates the Exclusion Force (Overlap Penalty).
-        Penalizes pixels where the sum of probabilities across channels exceeds 1.0.
-        """
-        # Sum probabilities across all macro channels for each pixel
-        density_sum = continuous_layouts.sum(dim=1) # Shape: (B, H, W)
+    def _calculate_overlap_penalty(self, continuous_layouts: torch.Tensor, macro_powers: torch.Tensor) -> torch.Tensor:
+        B, C, H, W = continuous_layouts.shape
         
-        # Penalize any pixel exceeding a total density of 1.0
+        # 1. Create a mask to ignore padded channels
+        valid_mask = (macro_powers != -1.0).view(B, C, 1, 1).float()
+        
+        # 2. Silence the padded channels so they don't contribute to overlap!
+        valid_layouts = continuous_layouts * valid_mask
+        
+        density_sum = valid_layouts.sum(dim=1) 
         overlap_error = F.relu(density_sum - 1.0)
         
         return (overlap_error ** 2).mean()
 
-    def _calculate_area_penalty(self, continuous_layouts: torch.Tensor) -> torch.Tensor:
-        """
-        Calculates the Inclusion Force (Mass Preservation).
-        Ensures each macro maintains its target area, preventing the model 
-        from erasing macros to avoid overlap penalties.
-        """
-        # Sum the total probability mass for each individual macro
-        macro_masses = continuous_layouts.sum(dim=(2, 3)) # Shape: (B, C)
-        
-        # Mean Squared Error against the expected target area
-        return F.mse_loss(macro_masses, torch.full_like(macro_masses, self.target_area))
-
-    def _calculate_thermal_penalty(self, continuous_layouts: torch.Tensor, target_heatmaps: torch.Tensor, macro_powers: torch.Tensor) -> torch.Tensor:
-        """
-        Calculates the Physics Force (Thermal Dispersion).
-        Penalizes layouts that place continuous macro density in cold regions,
-        weighted heavily by the actual power output of the specific macro.
-        """
+    def _calculate_area_penalty(self, continuous_layouts: torch.Tensor, macro_powers: torch.Tensor) -> torch.Tensor:
         B, C, H, W = continuous_layouts.shape
+        macro_masses = continuous_layouts.sum(dim=(2, 3)) 
         
-        # Normalize the heatmap to [0, 1] for stable gradient scaling
-        heatmap_max = target_heatmaps.view(B, -1).max(dim=1)[0].view(B, 1, 1, 1)
-        heatmap_min = target_heatmaps.view(B, -1).min(dim=1)[0].view(B, 1, 1, 1)
-        normalized_heatmaps = (target_heatmaps - heatmap_min) / (heatmap_max - heatmap_min + 1e-8)
+        # 1. Target area should be 100.0 for real macros, but 0.0 for padded macros!
+        target_areas = torch.where(macro_powers != -1.0, 
+                                   torch.full_like(macro_masses, self.target_area), 
+                                   torch.zeros_like(macro_masses))
         
-        # Calculate the inverse heatmap (1.0 = cold, 0.0 = hot)
-        inverse_heatmaps = 1.0 - normalized_heatmaps
-        
-        # NEW: Reshape the power tensor for spatial broadcasting (B, C) -> (B, C, 1, 1)
-        # We replace the -1 padding with 0 so padded macros don't contribute to the penalty
-        safe_powers = torch.where(macro_powers == -1.0, torch.zeros_like(macro_powers), macro_powers)
-        power_weights = safe_powers.view(B, C, 1, 1)
-        
-        # Multiply layout density by its specific power, then by the inverse heatmap
-        # High-power macros in cold spots will generate massive gradient penalties!
-        thermal_penalty = (continuous_layouts.to(self.device) * power_weights.to(self.device)) * inverse_heatmaps.to(self.device)
-        
-        return thermal_penalty.mean()
+        return F.mse_loss(macro_masses, target_areas)
 
     def forward(self, continuous_layouts: torch.Tensor, target_heatmaps: torch.Tensor, macro_powers: torch.Tensor) -> dict:
-        """
-        Executes the forward pass by aggregating all continuous physical constraints.
         
-        continuous_layouts: Shape (B, C, H, W)
-        target_heatmaps: Shape (B, 1, H, W)
-        """
-        
-        # 1. Calculate individual unweighted losses
-        overlap_loss = self._calculate_overlap_penalty(continuous_layouts)
-        area_loss = self._calculate_area_penalty(continuous_layouts)
+        # Make sure to pass macro_powers to ALL THREE functions now!
+        overlap_loss = self._calculate_overlap_penalty(continuous_layouts, macro_powers)
+        area_loss = self._calculate_area_penalty(continuous_layouts, macro_powers)
         thermal_loss = self._calculate_thermal_penalty(continuous_layouts, target_heatmaps, macro_powers)
 
         # 2. Apply hyperparameter weights
