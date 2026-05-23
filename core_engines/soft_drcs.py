@@ -44,13 +44,38 @@ class SoftDRC(nn.Module):
                                    torch.zeros_like(macro_masses))
         
         return F.mse_loss(macro_masses, target_areas)
+    
+    def _calculate_thermal_penalty(self, continuous_layouts: torch.Tensor, target_heatmaps: torch.Tensor, macro_powers: torch.Tensor) -> torch.Tensor:
+        """
+        Calculates the Physics Force (Thermal Dispersion).
+        Penalizes layouts that place continuous macro density in cold regions,
+        weighted heavily by the actual power output of the specific macro.
+        """
+        # Normalize the heatmap to [0, 1] for stable gradient scaling
+        heatmap_max = target_heatmaps.view(B, -1).max(dim=1)[0].view(B, 1, 1, 1)
+        heatmap_min = target_heatmaps.view(B, -1).min(dim=1)[0].view(B, 1, 1, 1)
+        normalized_heatmaps = (target_heatmaps - heatmap_min) / (heatmap_max - heatmap_min + 1e-8)
+        
+        # Calculate the inverse heatmap (1.0 = cold, 0.0 = hot)
+        inverse_heatmaps = 1.0 - normalized_heatmaps
+        
+        # NEW: Reshape the power tensor for spatial broadcasting (B, C) -> (B, C, 1, 1)
+        # We replace the -1 padding with 0 so padded macros don't contribute to the penalty
+        safe_powers = torch.where(macro_powers == -1.0, torch.zeros_like(macro_powers), macro_powers)
+        power_weights = safe_powers.view(B, C, 1, 1)
+
+        # Multiply layout density by its specific power, then by the inverse heatmap
+        # High-power macros in cold spots will generate massive gradient penalties!
+        thermal_penalty = (continuous_layouts.to(self.device) * power_weights.to(self.device)) * inverse_heatmaps.to(self.device)
+        
+        return thermal_penalty.mean()
 
     def forward(self, continuous_layouts: torch.Tensor, target_heatmaps: torch.Tensor, macro_powers: torch.Tensor) -> dict:
         
         # Make sure to pass macro_powers to ALL THREE functions now!
-        overlap_loss = self._calculate_overlap_penalty(continuous_layouts, macro_powers)
-        area_loss = self._calculate_area_penalty(continuous_layouts, macro_powers)
-        thermal_loss = self._calculate_thermal_penalty(continuous_layouts, target_heatmaps, macro_powers)
+        overlap_loss = self._calculate_overlap_penalty(continuous_layouts, macro_powers.to(self.device))
+        area_loss = self._calculate_area_penalty(continuous_layouts, macro_powers.to(self.device))
+        thermal_loss = self._calculate_thermal_penalty(continuous_layouts, target_heatmaps, macro_powers.to(self.device))
 
         # 2. Apply hyperparameter weights
         weighted_overlap = self.overlap_weight * overlap_loss
