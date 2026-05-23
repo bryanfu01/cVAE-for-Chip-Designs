@@ -16,7 +16,7 @@ exp_params:
   manual_seed: 42
 
 soft_drc_params:
-  use_soft_drc: False
+  use_soft_drc: True
   overlap_weight: 20.0
   area_weight: 8.0
   thermal_weight: 4.0
@@ -24,11 +24,11 @@ soft_drc_params:
 trainer_params:
   accelerator: "tpu" 
   devices: 1          
-  resume_ckpt_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/ConditionalVAE/version_7/checkpoints/last.ckpt"
+  resume_ckpt_path: null
   max_epochs: 100
 
 logging_params:
-  save_dir: "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/"
-  name: "Base_Training_3.0"
+  save_dir: "/content/drive/MyDrive/ECE_175B_Final_Project/Soft_DRC_Checkpoints/"
+  name: "Soft_DRC_Training"
 
   
