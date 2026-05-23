@@ -112,6 +112,11 @@ def main():
                     # Simulate the heat map of the legalized chip
                     chip_powers = ground_truth_powers[i].tolist()
                     simulated_heatmap = finite_solver.simulate(legal_chip, chip_powers)
+                    s_max = simulated_heatmap.max()
+                    s_min = simulated_heatmap.min()
+                    if s_max > s_min:
+                        simulated_heatmap = (simulated_heatmap - s_min) / (s_max - s_min)
+
                     target_heatmap = heat_maps[i].unsqueeze(0)
                     
                     thermal_mse = torch.nn.functional.mse_loss(simulated_heatmap, target_heatmap)

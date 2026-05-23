@@ -53,6 +53,11 @@ class DataGenerator:
                 pass
         valid_heat_map = self.finite_solver.simulate(macros=valid_chip, power_vals=power_vals)
 
+        h_max = valid_heat_map.max()
+        h_min = valid_heat_map.min()
+        if h_max > h_min:
+            valid_heat_map = (valid_heat_map - h_min) / (h_max - h_min)
+
         # Guarantees the chip layouts have the same shape. -1 indicates padding, not part of chip
         num_macros = valid_chip.size(dim=1)
         pad_size = self.macros_max - num_macros
