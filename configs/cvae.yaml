@@ -1,5 +1,5 @@
 model_params:
-  name: 'SoftDRCs'
+  name: 'ConditionalVAE'
   latent_dim: 128
 
 data_params:
@@ -28,7 +28,7 @@ trainer_params:
   max_epochs: 100
 
 logging_params:
-  save_dir: "/content/drive/MyDrive/ECE_175B_Final_Project/Soft_DRC_Checkpoints/"
+  save_dir: "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/"
   name: "Soft_DRC_Training"
 
   
