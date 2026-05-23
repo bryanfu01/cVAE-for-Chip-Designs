@@ -115,6 +115,11 @@ def main():
                     target_heatmap = heat_maps[i].unsqueeze(0)
                     
                     thermal_mse = torch.nn.functional.mse_loss(simulated_heatmap, target_heatmap)
+                    print(f"\n--- Batch {batch_idx} Debug ---")
+                    print(f"Target Sum: {target_heatmap.sum().item():.4f} | Sim Sum: {simulated_heatmap.sum().item():.4f}")
+                    print(f"Target Max: {target_heatmap.max().item():.4f} | Sim Max: {simulated_heatmap.max().item():.4f}")
+                    print(f"MSE Value:  {thermal_mse.item()}")
+
                     total_thermal_mse += thermal_mse.item()
 
                     if vis_generated is None:
