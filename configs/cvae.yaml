@@ -24,7 +24,7 @@ soft_drc_params:
 trainer_params:
   accelerator: "tpu" 
   devices: 1          
-  resume_ckpt_path: null
+  resume_ckpt_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/ConditionalVAE/version_7/checkpoints/last.ckpt"
   max_epochs: 100
 
 logging_params:
