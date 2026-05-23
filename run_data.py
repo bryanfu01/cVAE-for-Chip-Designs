@@ -2,6 +2,7 @@ import os
 import yaml
 import torch
 import concurrent.futures
+import multiprocessing as mp # 1. Import the multiprocessing library
 from tqdm import tqdm
 from data_generation.data_generator import DataGenerator 
 
@@ -11,6 +12,10 @@ generator = None
 def init_worker(config):
     """Initializes the DataGenerator once per CPU core."""
     global generator
+    
+    # 2. Prevent OpenMP thread clashing. Forces PyTorch to use exactly 1 thread per Colab core.
+    torch.set_num_threads(1) 
+    
     generator = DataGenerator(data_cfg=config['data_params'], solver_cfg=config['finite_solver_params'])
 
 def generate_single_chip(_):
@@ -28,10 +33,17 @@ def main():
     
     available_cores = os.cpu_count()
     print(f"Detected {available_cores} CPU cores. Launching workers...")
-    # 1. Launch a Process Pool
-    with concurrent.futures.ProcessPoolExecutor(max_workers=available_cores, initializer=init_worker, initargs=(config,)) as executor:
+    
+    # 3. Create a 'spawn' context to safely bypass PyTorch memory corruption
+    ctx = mp.get_context('spawn')
+    
+    # 4. Pass the mp_context into the ProcessPoolExecutor
+    with concurrent.futures.ProcessPoolExecutor(max_workers=available_cores, 
+                                                initializer=init_worker, 
+                                                initargs=(config,),
+                                                mp_context=ctx) as executor: 
         
-        # 2. Map the generation function across all cores and wrap it in tqdm for a progress bar
+        # Map the generation function across all cores and wrap it in tqdm for a progress bar
         results = list(tqdm(executor.map(generate_single_chip, range(num_samples)), total=num_samples))
         
     # 3. Unpack the results
