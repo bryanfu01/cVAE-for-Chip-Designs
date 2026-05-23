@@ -1,5 +1,5 @@
 model_params:
-  name: 'ConditionalVAE'
+  name: 'SoftDRCs'
   latent_dim: 128
 
 data_params:
