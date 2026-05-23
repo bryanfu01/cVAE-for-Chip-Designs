@@ -51,6 +51,7 @@ class SoftDRC(nn.Module):
         Penalizes layouts that place continuous macro density in cold regions,
         weighted heavily by the actual power output of the specific macro.
         """
+        B, C, H, W = continuous_layouts.shape
         # Normalize the heatmap to [0, 1] for stable gradient scaling
         heatmap_max = target_heatmaps.view(B, -1).max(dim=1)[0].view(B, 1, 1, 1)
         heatmap_min = target_heatmaps.view(B, -1).min(dim=1)[0].view(B, 1, 1, 1)
