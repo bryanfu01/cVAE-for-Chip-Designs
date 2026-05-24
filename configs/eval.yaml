@@ -5,6 +5,6 @@ saving_params:
   save_visualizations: True
 
 latent_optim:
-  use_lso: False
+  use_lso: True
   steps: 50
   lr: 0.05
