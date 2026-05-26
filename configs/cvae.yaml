@@ -4,19 +4,19 @@ model_params:
 
 data_params:
   data_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Chip_Layouts/Chip_Dataset_4.0.pt"
-  train_batch_size: 64
-  val_batch_size:  64
+  train_batch_size: 1
+  val_batch_size:  1
   patch_size: 64
   num_workers: 2
 
 exp_params:
   LR: 0.001
   weight_decay: 0.0
-  kld_weight: 0.00025
+  kld_weight: 0.0
   manual_seed: 42
 
 soft_drc_params:
-  use_soft_drc: True
+  use_soft_drc: False
   overlap_weight: 20.0
   area_weight: 8.0
   thermal_weight: 4.0
@@ -24,7 +24,8 @@ soft_drc_params:
 trainer_params:
   accelerator: "gpu" 
   devices: 1          
-  resume_ckpt_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/ConditionalVAE/version_11/checkpoints/last.ckpt"
+  resume_ckpt_path: null
+  overfit_batches: 1
   max_epochs: 100
 
 logging_params:

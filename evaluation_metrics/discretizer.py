@@ -4,7 +4,7 @@ from torch import Tensor
 def extract_center_of_mass(continuous_layout: Tensor, ground_truth_macros: Tensor) -> Tensor:
     """
     Converts continuous (B, C, H, W) density back into discrete (B, 4, C) bounding boxes.
-    Requires ground_truth_macros to grab the exact target Widths and Heights.
+    Requires ground_truth_macros to grab the exact target Widths and Heights + # of macros.
     """
     B, num_macros, H, W = continuous_layout.shape
     device = continuous_layout.device
