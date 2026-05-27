@@ -112,7 +112,7 @@ class VAEXperiment(pl.LightningModule):
             drc_metrics = self.soft_drc_evaluator(recons, heat_maps, powers)
             
             # Add the raw physics penalty directly to the total val_loss
-            val_loss['loss'] = self.soft_drc_params.get() * val_loss['loss'] + drc_metrics['total_drc_loss']
+            val_loss['loss'] = self.soft_drc_params.get('vanilla_weight', 100.0) * val_loss['loss'] + drc_metrics['total_drc_loss']
             
             # Merge the individual tracking metrics (Overlap, Area, Thermal)
             val_loss.update({k: v for k, v in drc_metrics.items() if k != 'total_drc_loss'})
