@@ -61,7 +61,10 @@ class VAEXperiment(pl.LightningModule):
             
             # Check the average "mass" of the continuous macros. 
             # If target_area is 100, this should ideally climb toward 100 over time.
-            mean_mass = recons_probe.sum(dim=(2, 3)).mean().item()
+            B, C, H, W = recons_probe.shape
+            valid_mask = (powers != -1.0).view(B, C, 1, 1).float().to(self.device)
+            valid_layouts = recons_probe * valid_mask
+            mean_mass = valid_layouts.sum(dim=(2, 3)).mean().item()
             print(f"Mean Macro Mass:  {mean_mass:.2f}")
 
         train_loss = self.model.loss_function(*results,

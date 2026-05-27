@@ -40,7 +40,11 @@ class SoftDRC(nn.Module):
 
     def _calculate_area_penalty(self, continuous_layouts: torch.Tensor, macro_powers: torch.Tensor) -> torch.Tensor:
         B, C, H, W = continuous_layouts.shape
-        macro_masses = continuous_layouts.sum(dim=(2, 3)) 
+
+        valid_mask = (macro_powers != -1.0).view(B, C, 1, 1).float().to(self.device)
+        valid_layouts = continuous_layouts * valid_mask
+
+        macro_masses = valid_layouts.sum(dim=(2, 3)) 
         
         # 1. Target area should be 100.0 for real macros, but 0.0 for padded macros!
         target_areas = torch.where(macro_powers != -1.0, 
