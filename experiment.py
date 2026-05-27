@@ -78,13 +78,14 @@ class VAEXperiment(pl.LightningModule):
 
             # PROBE 3: Gradient Balance (Prints once per epoch)
             if batch_idx == 0:
-                base_loss = train_loss['loss'].item()
+                base_loss = self.soft_drc_params.get('vanilla_weight') * train_loss['loss'].item()
                 raw_drc = drc_metrics['total_drc_loss'].item()
+                raw_sharpness = drc_metrics['Soft_Sharpness_Loss'].item()
                 print(f"=== PROBE 3: EPOCH {self.current_epoch} LOSS BALANCE ===")
                 print(f"Base VAE Loss:    {base_loss:.4f}")
                 print(f"Raw Soft DRC:     {raw_drc:.4f}")
                 print(f"Warmup Multiplier: {warmup_factor:.4f}")
-                print(f"Effective DRC:    {(raw_drc * warmup_factor):.4f}\n")
+                print(f"Effective DRC:    {(raw_drc * warmup_factor + (1 - warmup_factor) * raw_sharpness):.4f}\n")
 
             train_loss['loss'] = self.soft_drc_params.get('vanilla_weight') * train_loss['loss'] + scaled_drc_loss
             
