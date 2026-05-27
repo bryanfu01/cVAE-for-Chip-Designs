@@ -63,7 +63,7 @@ def main():
         thermal_weight=config['soft_drc_params']['thermal_weight'],
         sharpness_weight=config['soft_drc_params']['sharpness_weight'],
         target_area=config['soft_drc_params']['target_area'],
-        cohesion_weight=config['soft_drc_params']['config_weight']
+        cohesion_weight=config['soft_drc_params']['cohesion_weight']
     )
     
     print("Beginning evaluation...")
