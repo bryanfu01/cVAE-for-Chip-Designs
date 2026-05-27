@@ -28,7 +28,7 @@ trainer_params:
   resume_ckpt_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/ConditionalVAE/version_15/checkpoints/last.ckpt"
   limit_train_batches: 0.1
   limit_val_batches: 0.1
-  max_epochs: 100
+  max_epochs: 5
 
 logging_params:
   save_dir: "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/"

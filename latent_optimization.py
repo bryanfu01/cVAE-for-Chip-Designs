@@ -37,6 +37,14 @@ def optimize_latent_space(model, condition, z, ground_truth_powers=None, lso_ste
         total_penalty = physics_penalty + z_penalty
         # Backpropagate to z
         total_penalty.backward()
+
+        # PROBE 4: Gradient Flow Check (Only on the first step of the first batch)
+        if step == 0:
+            grad_magnitude = z.grad.abs().mean().item()
+            print(f"LSO Step 0 - Latent Gradient Magnitude: {grad_magnitude:.6f}")
+            if grad_magnitude == 0.0:
+                print("WARNING: DEAD GRADIENT. The decoder is completely disconnected from z!")
+        
         optimizer.step()
         
     return z.detach()

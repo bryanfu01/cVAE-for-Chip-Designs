@@ -43,7 +43,25 @@ class VAEXperiment(pl.LightningModule):
         layouts, heat_maps, _, powers = batch
         self.curr_device = layouts.device
 
+        if batch_idx == 0 and self.current_epoch == 0:
+            print("\n=== PROBE 1: DATA PIPELINE ===")
+            print(f"Heatmap Min/Max: {heat_maps.min().item():.4f} / {heat_maps.max().item():.4f}")
+            print(f"Layouts Shape:   {layouts.shape}")
+            print(f"Sample Powers:   {powers[0].tolist()}")
+            print("==============================\n")
+
         results = self.forward(input=layouts, condition=heat_maps)
+
+        if batch_idx == 0:
+            recons_probe = results[0]
+            print(f"\n=== PROBE 2: EPOCH {self.current_epoch} RAW OUTPUT ===")
+            print(f"Raw Prob Min/Max: {recons_probe.min().item():.4f} / {recons_probe.max().item():.4f}")
+            
+            # Check the average "mass" of the continuous macros. 
+            # If target_area is 100, this should ideally climb toward 100 over time.
+            mean_mass = recons_probe.sum(dim=(2, 3)).mean().item()
+            print(f"Mean Macro Mass:  {mean_mass:.2f}")
+
         train_loss = self.model.loss_function(*results,
                                               M_N=self.params['kld_weight'], 
                                               batch_idx=batch_idx)
@@ -55,6 +73,17 @@ class VAEXperiment(pl.LightningModule):
             warmup_epochs = self.soft_drc_params.get('warmup_epochs', 30)
             warmup_factor = min(1.0, self.current_epoch / warmup_epochs)
             scaled_drc_loss = drc_metrics['total_drc_loss'] * warmup_factor
+
+            # PROBE 3: Gradient Balance (Prints once per epoch)
+            if batch_idx == 0:
+                base_loss = train_loss['loss'].item()
+                raw_drc = drc_metrics['total_drc_loss'].item()
+                print(f"=== PROBE 3: EPOCH {self.current_epoch} LOSS BALANCE ===")
+                print(f"Base VAE Loss:    {base_loss:.4f}")
+                print(f"Raw Soft DRC:     {raw_drc:.4f}")
+                print(f"Warmup Multiplier: {warmup_factor:.4f}")
+                print(f"Effective DRC:    {(raw_drc * warmup_factor):.4f}\n")
+
             train_loss['loss'] = train_loss['loss'] + scaled_drc_loss
             
             # Merge the isolated metrics for TensorBoard tracking
