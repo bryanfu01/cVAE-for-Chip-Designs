@@ -31,7 +31,7 @@ class SoftDRC(nn.Module):
         # 1. Create a mask to ignore padded channels
         valid_mask = (macro_powers != -1.0).view(B, C, 1, 1).float().to(self.device)
         
-        valid_layouts = continuous_layouts * valid_mask
+        valid_layouts = continuous_layouts * valid_mask.to(self.device)
         
         density_sum = valid_layouts.sum(dim=1) 
         overlap_error = F.relu(density_sum - 1.0)
