@@ -50,7 +50,7 @@ seed_everything(config['exp_params']['manual_seed'], workers=True)
 
 # Build Model and Experiment
 model = vae_models[config['model_params']['name']](**config['model_params'])
-experiment = VAEXperiment(model, config['exp_params'])
+experiment = VAEXperiment(model, config['exp_params'], config['soft_drc_params'])
 
 # Safely check for 'accelerator' instead of the deprecated 'gpus' key
 use_gpu = config['trainer_params'].get('accelerator') == 'gpu'

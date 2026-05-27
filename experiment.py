@@ -15,11 +15,13 @@ class VAEXperiment(pl.LightningModule):
 
     def __init__(self,
                  vae_model: BaseVAE,
-                 params: dict) -> None:
+                 params: dict,
+                 soft_drc_params: dict) -> None:
         super(VAEXperiment, self).__init__()
 
         self.model = vae_model
         self.params = params
+        self.soft_drc_params = soft_drc_params
         self.curr_device = None
         self.hold_graph = False
         try:
@@ -27,10 +29,10 @@ class VAEXperiment(pl.LightningModule):
         except:
             pass
         self.soft_drc_evaluator = SoftDRC(
-            overlap_weight=self.params.get('overlap_weight', 50.0),
-            area_weight=self.params.get('area_weight', 20.0),
-            thermal_weight=self.params.get('thermal_weight', 10.0),
-            target_area=self.params.get('target_area', 100.0) # E.g., for a 10x10 footprint
+            overlap_weight=self.sotf_drc_params.get('overlap_weight', 50.0),
+            area_weight=self.soft_drc_params.get('area_weight', 20.0),
+            thermal_weight=self.soft_drc_params.get('thermal_weight', 10.0),
+            target_area=self.soft_drc_params.get('target_area', 100.0) # E.g., for a 10x10 footprint
         )
 
     def forward(self, input: Tensor, condition: Tensor) -> Tensor:
@@ -46,11 +48,11 @@ class VAEXperiment(pl.LightningModule):
                                               M_N=self.params['kld_weight'], 
                                               batch_idx=batch_idx)
 
-        if self.params.get('use_soft_drc', False):
+        if self.soft_drc_params.get('use_soft_drc', False):
             recons = results[0]
             drc_metrics = self.soft_drc_evaluator(recons, heat_maps, powers)
 
-            warmup_epochs = self.params.get('warmup_epochs', 30)
+            warmup_epochs = self.soft_drc_params.get('warmup_epochs', 30)
             warmup_factor = min(1.0, self.current_epoch / warmup_epochs)
             scaled_drc_loss = drc_metrics['total_drc_loss'] * warmup_factor
             train_loss['loss'] = train_loss['loss'] + scaled_drc_loss
@@ -73,6 +75,16 @@ class VAEXperiment(pl.LightningModule):
         val_loss = self.model.loss_function(*results,
                                             M_N=1.0, 
                                             batch_idx=batch_idx)
+        
+        if self.soft_drc_params.get('use_soft_drc', False):
+            recons = results[0]
+            drc_metrics = self.soft_drc_evaluator(recons, heat_maps, powers)
+            
+            # Add the raw physics penalty directly to the total val_loss
+            val_loss['loss'] = val_loss['loss'] + drc_metrics['total_drc_loss']
+            
+            # Merge the individual tracking metrics (Overlap, Area, Thermal)
+            val_loss.update({k: v for k, v in drc_metrics.items() if k != 'total_drc_loss'})
 
         self.log_dict({f"val_{key}": val.item() for key, val in val_loss.items()}, sync_dist=True)
         
