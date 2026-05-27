@@ -81,8 +81,10 @@ class SoftDRC(nn.Module):
         valid_layouts = continuous_layouts * valid_mask
         
         # Penalizes values near 0.5. The penalty drops to 0 at exactly 0.0 or 1.0.
-        sharpness_error = valid_layouts * (1.0 - valid_layouts)
-        return sharpness_error.mean()
+        eps = 1e-8
+        bce = -(valid_layouts * torch.log(valid_layouts + eps) + 
+                (1.0 - valid_layouts) * torch.log(1.0 - valid_layouts + eps))
+        return bce.mean()
     
     def _calculate_cohesion_penalty(self, continuous_layouts: torch.Tensor, macro_powers: torch.Tensor) -> torch.Tensor:
         """

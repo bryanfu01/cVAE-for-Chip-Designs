@@ -18,7 +18,7 @@ exp_params:
 soft_drc_params:
   use_soft_drc: True
   overlap_weight: 0.05
-  area_weight: 0.05
+  area_weight: 50.0
   thermal_weight: 0.05
   target_area: 100.0
   sharpness_weight: 100.0
