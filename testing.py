@@ -16,7 +16,7 @@ def test_area_penalty():
     continuous_layouts[0, 0, :50, 0] = 1.0 
     
     # Fill Chip 1 with 100 pixels of mass (value 1.0)
-    continuous_layouts[1, 0, :100, 0] = 1.0
+    continuous_layouts[1, 0, :10, :10] = 1.0
     
     # Define macro powers: -1.0 means padding, 1.0 means active
     macro_powers = torch.tensor([[1.0], [1.0]])
