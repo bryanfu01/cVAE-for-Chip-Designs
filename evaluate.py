@@ -36,7 +36,10 @@ def main():
 
     # 2. Load Model & Data
     base_model = ConditionalVAE(**config['model_params'])
-    experiment = VAEXperiment.load_from_checkpoint(ckpt_path, vae_model=base_model, params=config['exp_params'])
+    experiment = VAEXperiment.load_from_checkpoint(ckpt_path, 
+                                                   vae_model=base_model, 
+                                                   params=config['exp_params'], 
+                                                   soft_drc_params=config['soft_drc_params'])
     experiment.eval()
     experiment.to(device)
 

@@ -29,7 +29,7 @@ class VAEXperiment(pl.LightningModule):
         except:
             pass
         self.soft_drc_evaluator = SoftDRC(
-            overlap_weight=self.sotf_drc_params.get('overlap_weight', 50.0),
+            overlap_weight=self.soft_drc_params.get('overlap_weight', 50.0),
             area_weight=self.soft_drc_params.get('area_weight', 20.0),
             thermal_weight=self.soft_drc_params.get('thermal_weight', 10.0),
             target_area=self.soft_drc_params.get('target_area', 100.0) # E.g., for a 10x10 footprint
