@@ -23,7 +23,7 @@ soft_drc_params:
   target_area: 100.0
   sharpness_weight: 200.0
   cohesion_weight: 50.0
-  vanilla_weight: 100.0
+  vanilla_weight: 1000.0
   warmup_epochs: 30.0
 
 trainer_params:
