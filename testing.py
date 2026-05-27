@@ -20,9 +20,10 @@ def test_area_penalty():
     
     # Define macro powers: -1.0 means padding, 1.0 means active
     macro_powers = torch.tensor([[1.0], [1.0]])
+    device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
     
     # Calculate penalty
-    penalty = drc._calculate_area_penalty(continuous_layouts, macro_powers)
+    penalty = drc._calculate_area_penalty(continuous_layouts, macro_powers.to(device))
     
     print(f"Computed MSE Penalty: {penalty.item():.4f}")
     
