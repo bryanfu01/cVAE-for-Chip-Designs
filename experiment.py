@@ -68,7 +68,7 @@ class VAEXperiment(pl.LightningModule):
         return train_loss['loss']
 
     def validation_step(self, batch, batch_idx):
-        layouts, heat_maps, _, _ = batch
+        layouts, heat_maps, _, powers = batch
         self.curr_device = layouts.device
 
         results = self.forward(layouts, condition=heat_maps)
