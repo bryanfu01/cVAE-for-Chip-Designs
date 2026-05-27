@@ -60,7 +60,10 @@ def main():
     drc_evaluator = SoftDRC(
         overlap_weight=config['soft_drc_params']['overlap_weight'], 
         area_weight=config['soft_drc_params']['area_weight'], 
-        thermal_weight=config['soft_drc_params']['thermal_weight']
+        thermal_weight=config['soft_drc_params']['thermal_weight'],
+        sharpness_weight=config['soft_drc_params']['sharpness_weight'],
+        target_area=config['soft_drc_params']['target_area'],
+        cohesion_weight=config['soft_drc_params']['config_weight']
     )
     
     print("Beginning evaluation...")

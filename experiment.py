@@ -32,8 +32,10 @@ class VAEXperiment(pl.LightningModule):
             overlap_weight=self.soft_drc_params.get('overlap_weight', 50.0),
             area_weight=self.soft_drc_params.get('area_weight', 20.0),
             thermal_weight=self.soft_drc_params.get('thermal_weight', 10.0),
-            target_area=self.soft_drc_params.get('target_area', 100.0) # E.g., for a 10x10 footprint
-        )
+            sharpness_weight=self.soft_drc_params.get('sharpness_weight', 100.0),
+            target_area=self.soft_drc_params.get('target_area', 20.0), # E.g., for a 10x10 footprint
+            cohesion_weight=self.soft_drc_params.get('cohesion_weight', 20.0)
+            )
 
     def forward(self, input: Tensor, condition: Tensor) -> Tensor:
         # Equivalent to self.model.forward(input), but pytorch works better this way for backprop

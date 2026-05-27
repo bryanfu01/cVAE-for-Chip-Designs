@@ -7,7 +7,9 @@ class SoftDRC(nn.Module):
                  overlap_weight: float = 50.0, 
                  area_weight: float = 20.0, 
                  thermal_weight: float = 10.0,
-                 target_area: float = 100.0): 
+                 sharpness_weight: float = 20.0,
+                 target_area: float = 100.0,
+                 cohesion_weight: float = 20.0): 
         """
         Differentiable Physics Penalties for Continuous Chip Layouts.
         """
@@ -15,6 +17,8 @@ class SoftDRC(nn.Module):
         self.overlap_weight = overlap_weight
         self.area_weight = area_weight
         self.thermal_weight = thermal_weight
+        self.sharpness_weight = sharpness_weight
+        self.cohesion_weight = cohesion_weight
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
         
@@ -70,6 +74,30 @@ class SoftDRC(nn.Module):
         thermal_penalty = (continuous_layouts.to(self.device) * power_weights.to(self.device)) * inverse_heatmaps.to(self.device)
         
         return thermal_penalty.mean()
+    
+    def _calculate_sharpness_penalty(self, continuous_layouts: torch.Tensor, macro_powers: torch.Tensor) -> torch.Tensor:
+        B, C, H, W = continuous_layouts.shape
+        valid_mask = (macro_powers != -1.0).view(B, C, 1, 1).float().to(self.device)
+        valid_layouts = continuous_layouts * valid_mask
+        
+        # Penalizes values near 0.5. The penalty drops to 0 at exactly 0.0 or 1.0.
+        sharpness_error = valid_layouts * (1.0 - valid_layouts)
+        return sharpness_error.mean()
+    
+    def _calculate_cohesion_penalty(self, continuous_layouts: torch.Tensor, macro_powers: torch.Tensor) -> torch.Tensor:
+        """
+        Total Variation Loss. Penalizes scattered pixels by summing the physical 
+        edges of the probability distributions. Forces macros to clump into solid shapes.
+        """
+        B, C, H, W = continuous_layouts.shape
+        valid_mask = (macro_powers != -1.0).view(B, C, 1, 1).float().to(self.device)
+        valid_layouts = continuous_layouts * valid_mask
+
+        # Calculate differences between adjacent pixels (finding the edges)
+        diff_h = torch.abs(valid_layouts[:, :, 1:, :] - valid_layouts[:, :, :-1, :])
+        diff_w = torch.abs(valid_layouts[:, :, :, 1:] - valid_layouts[:, :, :, :-1])
+
+        return diff_h.mean() + diff_w.mean()
 
     def forward(self, continuous_layouts: torch.Tensor, target_heatmaps: torch.Tensor, macro_powers: torch.Tensor) -> dict:
         
@@ -77,19 +105,25 @@ class SoftDRC(nn.Module):
         overlap_loss = self._calculate_overlap_penalty(continuous_layouts, macro_powers.to(self.device))
         area_loss = self._calculate_area_penalty(continuous_layouts, macro_powers.to(self.device))
         thermal_loss = self._calculate_thermal_penalty(continuous_layouts, target_heatmaps, macro_powers.to(self.device))
+        sharpness_loss = self._calculate_sharpness_penalty(continuous_layouts, macro_powers.to(self.device))
+        cohesion_loss = self._calculate_cohesion_penalty(continuous_layouts, macro_powers.to(self.device))
 
         # 2. Apply hyperparameter weights
         weighted_overlap = self.overlap_weight * overlap_loss
         weighted_area = self.area_weight * area_loss
         weighted_thermal = self.thermal_weight * thermal_loss
+        weighted_sharpness = self.sharpness_weight * sharpness_loss
+        weighted_cohesion = self.cohesion_weight * cohesion_loss
 
         # 3. Sum into the total Soft DRC loss
-        total_drc_loss = weighted_overlap + weighted_area + weighted_thermal
+        total_drc_loss = weighted_overlap + weighted_area + weighted_thermal + weighted_sharpness + weighted_cohesion
 
         # 4. Return dictionary formatted for TensorBoard logging
         return {
             'total_drc_loss': total_drc_loss,
             'Soft_Overlap_Loss': weighted_overlap.detach(),
             'Soft_Area_Loss': weighted_area.detach(),
-            'Soft_Thermal_Loss': weighted_thermal.detach()
+            'Soft_Thermal_Loss': weighted_thermal.detach(),
+            'Soft_Sharpness_Loss': weighted_sharpness.detach(),
+            'Soft_Cohesion_Loss': weighted_cohesion.detach()
         }
