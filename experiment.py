@@ -74,7 +74,7 @@ class VAEXperiment(pl.LightningModule):
 
             warmup_epochs = self.soft_drc_params.get('warmup_epochs', 30)
             warmup_factor = min(1.0, self.current_epoch / warmup_epochs)
-            scaled_drc_loss = drc_metrics['total_drc_loss'] * warmup_factor
+            scaled_drc_loss = drc_metrics['total_drc_loss'] * warmup_factor + (1 - warmup_factor) * drc_metrics['Soft_Sharpness_Loss']
 
             # PROBE 3: Gradient Balance (Prints once per epoch)
             if batch_idx == 0:
@@ -86,7 +86,7 @@ class VAEXperiment(pl.LightningModule):
                 print(f"Warmup Multiplier: {warmup_factor:.4f}")
                 print(f"Effective DRC:    {(raw_drc * warmup_factor):.4f}\n")
 
-            train_loss['loss'] = train_loss['loss'] + scaled_drc_loss
+            train_loss['loss'] = self.soft_drc_params.get('vanilla_weight') * train_loss['loss'] + scaled_drc_loss
             
             # Merge the isolated metrics for TensorBoard tracking
             train_loss.update({k: v for k, v in drc_metrics.items() if k != 'total_drc_loss'})
@@ -112,7 +112,7 @@ class VAEXperiment(pl.LightningModule):
             drc_metrics = self.soft_drc_evaluator(recons, heat_maps, powers)
             
             # Add the raw physics penalty directly to the total val_loss
-            val_loss['loss'] = val_loss['loss'] + drc_metrics['total_drc_loss']
+            val_loss['loss'] = self.soft_drc_params.get() * val_loss['loss'] + drc_metrics['total_drc_loss']
             
             # Merge the individual tracking metrics (Overlap, Area, Thermal)
             val_loss.update({k: v for k, v in drc_metrics.items() if k != 'total_drc_loss'})
