@@ -49,10 +49,17 @@ class VAEXperiment(pl.LightningModule):
         if self.params.get('use_soft_drc', False):
             recons = results[0]
             drc_metrics = self.soft_drc_evaluator(recons, heat_maps, powers)
-            train_loss['loss'] = train_loss['loss'] + drc_metrics['total_drc_loss']
+
+            warmup_epochs = self.params.get('warmup_epochs', 30)
+            warmup_factor = min(1.0, self.current_epoch / warmup_epochs)
+            scaled_drc_loss = drc_metrics['total_drc_loss'] * warmup_factor
+            train_loss['loss'] = train_loss['loss'] + scaled_drc_loss
             
             # Merge the isolated metrics for TensorBoard tracking
             train_loss.update({k: v for k, v in drc_metrics.items() if k != 'total_drc_loss'})
+
+            train_loss['DRC_Warmup_Factor'] = torch.tensor(warmup_factor)
+            train_loss.update({k: (v * warmup_factor) for k, v in drc_metrics.items() if k != 'total_drc_loss'})
 
         self.log_dict({key: val.item() for key, val in train_loss.items()}, sync_dist=True)
 
