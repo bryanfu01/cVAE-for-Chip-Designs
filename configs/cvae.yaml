@@ -18,12 +18,12 @@ exp_params:
 soft_drc_params:
   use_soft_drc: True
   overlap_weight: 0.05
-  area_weight: 1000.0
+  area_weight: 600000.0
   thermal_weight: 0.05
   target_area: 100.0
   sharpness_weight: 500.0
   cohesion_weight: 100.0
-  vanilla_weight: 4000.0
+  vanilla_weight: 10.0
   warmup_epochs: 30.0
 
 trainer_params:
