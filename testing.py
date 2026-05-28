@@ -19,7 +19,7 @@ def test_area_penalty():
     continuous_layouts[1, 0, :10, :10] = 1.0
     
     # Define macro powers: -1.0 means padding, 1.0 means active
-    macro_powers = torch.tensor([[1.0], [-1.0]])
+    macro_powers = torch.tensor([[-1.0], [-1.0]])
     device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
     
     # Calculate penalty
