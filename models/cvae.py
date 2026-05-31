@@ -144,30 +144,54 @@ class ConditionalVAE(BaseVAE):
         decoder_input = torch.cat([z, flat_condition], dim=1)
         return  [self.decode(decoder_input), input, mu, log_var]
 
-    def loss_function(self,
-                      *args,
-                      **kwargs) -> dict:
-        r"""
-        Computes the VAE loss function.
-        KL(N(\mu, \sigma), N(0, 1)) = \log \frac{1}{\sigma} + \frac{\sigma^2 + \mu^2}{2} - \frac{1}{2}
-        :param args:
-        :param kwargs:
-        :return:
-        """
+    # Change to BCE-based loss function that doesn't consider padded channels, i.e. channels that don't have macros. Implement minimum free bits methodology to insist on information encoded in z (mfu)
+    def loss_function(self, *args, **kwargs) -> dict:
+        """Weighted BCE + Free Bits KLD + Asperti dynamic balancing."""
         recons = args[0]
         input = args[1]
         mu = args[2]
         log_var = args[3]
 
-        kld_weight = kwargs['M_N'] # Account for the minibatch samples from the dataset
-        recons_loss =F.mse_loss(recons, input)
+        B, C, H, W = input.shape
+        eps = 1e-8
 
+        # Weighted BCE over real channels only
+        channel_has_macro = (input.sum(dim=(2, 3)) > 0).float()
+        valid_mask = channel_has_macro.view(B, C, 1, 1)
+        fg_count = (input * valid_mask > 0.5).float().sum()
+        bg_count = ((input <= 0.5).float() * valid_mask).sum()
+        pos_weight = bg_count / (fg_count + eps)
+        weight_map = torch.where(
+            input > 0.5,
+            torch.full_like(input, pos_weight.item()),
+            torch.ones_like(input)
+        ) * valid_mask
+        bce = F.binary_cross_entropy(recons, input,
+                                      weight=weight_map,
+                                      reduction='sum')
+        valid_pixel_count = valid_mask.sum() * H * W
+        recons_loss = bce / (valid_pixel_count + eps)
 
-        kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim = 1), dim = 0)
+        # Free bits KLD — guaranteed minimum per dimension (mfu)
+        lambda_bits = 0.5
+        kld_per_dim = -0.5 * (1 + log_var - mu**2 - log_var.exp())
+        free_bits_kld = torch.clamp(kld_per_dim, min=lambda_bits).mean()
 
-        loss = recons_loss + kld_weight * kld_loss
-        return {'loss': loss, 'Reconstruction_Loss':recons_loss.detach(), 'KLD':-kld_loss.detach()}
+        # Asperti dynamic gamma — automatic balance (mfu)
+        if not hasattr(self, '_recons_ema'):
+            self._recons_ema = recons_loss.item()
+        else:
+            self._recons_ema = 0.99 * self._recons_ema + 0.01 * recons_loss.item()
 
+        gamma = self._recons_ema / (free_bits_kld.item() + eps)
+        loss = recons_loss + gamma * free_bits_kld
+        # End (mfu)
+
+        return {'loss': loss,
+                'Reconstruction_Loss': recons_loss.detach(),
+                'KLD': -free_bits_kld.detach(),
+                'Gamma': torch.tensor(gamma)}
+    
     def sample(self, num_samples: int, current_device: torch.device, condition: Tensor, **kwargs) -> Tensor:
         """
         Generates new chip layouts based on a target heat map condition.

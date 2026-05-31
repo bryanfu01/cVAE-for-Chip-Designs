@@ -66,11 +66,108 @@ class VAEXperiment(pl.LightningModule):
             valid_layouts = recons_probe * valid_mask
             mean_mass = valid_layouts.sum(dim=(2, 3)).mean().item()
             print(f"Mean Macro Mass:  {mean_mass:.2f}")
+            
+            # Debugging: output distribution and sparsity (mfu)
+            counts = torch.histc(recons_probe, bins=10, min=0.0, max=1.0)
+            print(f"Output distribution: {[f'{c.item():.0f}' for c in counts]}")
+            input_nonzero = (results[1] > 0.5).float().mean().item()
+            recons_nonzero = (recons_probe > 0.5).float().mean().item()
+            print(f"Input nonzero:   {input_nonzero:.6f}")
+            print(f"Recons nonzero:  {recons_nonzero:.6f}")  
+
+            # End (mfu)
 
         train_loss = self.model.loss_function(*results,
                                               M_N=self.params['kld_weight'], 
                                               batch_idx=batch_idx)
+                                              
+        # Debugging: loss decomposition (mfu)
+        if batch_idx == 0:
+            recons_probe = results[0]
+            input_probe = results[1]
+            B, C, H, W = recons_probe.shape
 
+            # --- Macro Count Stats (fixed, printed once) ---
+            if self.current_epoch == 0:
+                real_macro_counts = (powers != -1.0).sum(dim=1).float()
+                print(f"--- Macro Count Stats (epoch 0 only) ---")
+                print(f"Min real macros:  {real_macro_counts.min().item():.0f}")
+                print(f"Max real macros:  {real_macro_counts.max().item():.0f}")
+                print(f"Mean real macros: {real_macro_counts.mean().item():.2f}")
+                print(f"Total channels:   {C}")
+                print(f"Avg padded channels: {(C - real_macro_counts.mean().item()):.2f}")
+                for count in range(C + 1):
+                    n = (real_macro_counts == count).sum().item()
+                    if n > 0:
+                        print(f"  {count} macros: {n} samples")
+
+            # --- MSE Breakdown ---
+            valid_mask = (powers != -1.0).view(B, C, 1, 1).float().to(self.device)
+            padding_mask = (powers == -1.0).view(B, C, 1, 1).float().to(self.device)
+
+            real_recons = recons_probe * valid_mask
+            real_input = input_probe * valid_mask
+            real_pixel_count = valid_mask.sum()
+            mse_real_channels = ((real_recons - real_input) ** 2).sum() / real_pixel_count
+
+            pad_recons = recons_probe * padding_mask
+            pad_input = input_probe * padding_mask
+            pad_pixel_count = padding_mask.sum()
+            mse_pad_channels = ((pad_recons - pad_input) ** 2).sum() / (pad_pixel_count + 1e-8)
+
+            foreground_mask = (input_probe > 0.5).float()
+            background_mask = ((input_probe <= 0.5).float()) * valid_mask
+
+            fg_count = foreground_mask.sum()
+            bg_count = background_mask.sum()
+
+            mse_foreground = ((recons_probe - input_probe) ** 2 * foreground_mask).sum() / (fg_count + 1e-8)
+            mse_background = ((recons_probe - input_probe) ** 2 * background_mask).sum() / (bg_count + 1e-8)
+
+            print(f"--- MSE Breakdown (Epoch {self.current_epoch}) ---")
+            print(f"Overall MSE:          {train_loss['Reconstruction_Loss'].item():.6f}")
+            print(f"MSE real channels:    {mse_real_channels.item():.6f}  ({real_pixel_count.item():.0f} pixels)")
+            print(f"MSE padded channels:  {mse_pad_channels.item():.6f}  ({pad_pixel_count.item():.0f} pixels)")
+            print(f"MSE foreground only:  {mse_foreground.item():.6f}  ({fg_count.item():.0f} macro pixels)")
+            print(f"MSE background only:  {mse_background.item():.6f}  ({bg_count.item():.0f} background pixels)")
+            print(f"Foreground/Background pixel ratio: {(fg_count / (bg_count + 1e-8)).item():.4f}")
+
+            # Check for fake macro generation — compare active output channels vs real macro count
+            real_macro_counts = (powers != -1.0).sum(dim=1).float()  # [B] ground truth count
+    
+            # A channel is "active" if the model output has meaningful mass
+            channel_masses = recons_probe.sum(dim=(2, 3))  # [B, C]
+            active_threshold = 10.0  # channels with mass > 10 are considered active
+            active_counts = (channel_masses > active_threshold).float().sum(dim=1)  # [B]
+    
+            print(f"--- Fake Macro Check ---")
+            print(f"Avg real macros:    {real_macro_counts.mean().item():.2f}")
+            print(f"Avg active channels:{active_counts.mean().item():.2f}")
+            fake_macros = (active_counts - real_macro_counts).clamp(min=0)
+            print(f"Avg fake macros:    {fake_macros.mean().item():.2f}")
+            print(f"Max fake macros:    {fake_macros.max().item():.0f}")
+            print(f"Samples with fakes: {(fake_macros > 0).sum().item()} / {B}")
+            
+            recon = train_loss['Reconstruction_Loss'].item()
+            kld = train_loss['KLD'].item()
+            gamma = train_loss['Gamma'].item()
+            print(f"Recon Loss:       {recon:.6f}")
+            print(f"KLD (free bits):  {kld:.4f}")
+            print(f"Gamma:            {gamma:.6f}")
+            print(f"KLD contribution: {gamma * abs(kld):.6f}")
+            print(f"Recon/KLD ratio:  {recon / (gamma * abs(kld) + 1e-8):.2f}")
+            mu = results[2]
+            log_var = results[3]
+            kld_per_dim = -0.5 * (1 + log_var - mu**2 - log_var.exp())  # [B, latent_dim]
+            dims_above_lambda = (kld_per_dim > 0.5).float().mean().item()
+            kld_per_dim_mean = kld_per_dim.mean().item()
+            kld_per_dim_max = kld_per_dim.max().item()
+            print(f"--- Free Bits Diagnostic ---")
+            print(f"KLD per dim (mean): {kld_per_dim_mean:.4f}")
+            print(f"KLD per dim (max):  {kld_per_dim_max:.4f}")
+            print(f"Dims above lambda (0.5): {dims_above_lambda:.4f}  ({dims_above_lambda*128:.1f} / 128 dims)")
+        # End (mfu)
+        
         if self.soft_drc_params.get('use_soft_drc', False):
             recons = results[0]
             drc_metrics = self.soft_drc_evaluator(recons, heat_maps, powers)
