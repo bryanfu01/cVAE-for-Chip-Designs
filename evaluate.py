@@ -73,6 +73,8 @@ def main():
     total_thermal_mse = 0.0
     successful_legalizations = 0
     failed_legalizations = 0
+    latent_variance = 0
+    total_mass = 0
 
     # Output configurable number of results (mfu)
     num_comparisons = eval_config['saving_params'].get('num_comparisons', 5)
@@ -165,7 +167,15 @@ def main():
                     cx = (combined * w_grid.view(1,1,-1)).sum() / total_mass
                     print(f"Trial {trial}: center of mass = ({cx.item():.1f}, {cy.item():.1f})")
                 print("================================\n")
-            # --- END DIAGNOSTIC --- (mfu)
+                # --- END DIAGNOSTIC --- (mfu)
+                num_layouts = 100
+                layout_1 = ground_truth_layouts[0:1]
+                variance_layouts = base_model.sample(num_samples=num_layouts, condition=heatmap_1)
+                variance_com = extract_center_of_mass(continuous_layout=variance_layouts, ground_truth_macros=layout_1)
+                latent_variance = torch.var(variance_com, dim=0)
+
+            total_mass = continuous_layouts.sum(dim=(2, 3))
+
             pre_legalized_boxes = extract_center_of_mass(continuous_layouts, ground_truth_layouts)
             batch_overlap = calculate_exact_overlap(pre_legalized_boxes)
             total_overlap += batch_overlap.sum().item()
@@ -227,6 +237,7 @@ def main():
     num_test_samples = len(test_loader.dataset)
     failure_rate = (failed_legalizations / num_test_samples) * 100
     
+    mass_fidelity = total_mass/num_test_samples
     avg_overlap = total_overlap / num_test_samples
     avg_displacement = (total_displacement / successful_legalizations) if successful_legalizations > 0 else 0.0
     avg_thermal_mse = (total_thermal_mse / successful_legalizations) if successful_legalizations > 0 else 0.0
@@ -237,6 +248,8 @@ Average Pre-Legalization Overlap: {avg_overlap:.2f} sq units/chip
 Average Legalizer Displacement:   {avg_displacement:.2f} units/macro
 Average Thermal MSE:              {avg_thermal_mse:.6f}
 Legalization Failure Rate:        {failure_rate:.2f}% ({failed_legalizations} unsalvageable chips)
+Latent Space Variance Test:    {latent_variance:.2f}
+Mass Fidelity Test:               {mass_fidelity:.2f}
 """
 
     # Print to console
