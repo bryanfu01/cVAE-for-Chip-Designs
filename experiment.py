@@ -176,9 +176,10 @@ class VAEXperiment(pl.LightningModule):
         if self.soft_drc_params.get('use_soft_drc', False):
             recons = results[0]
             drc_metrics = self.soft_drc_evaluator(recons, heat_maps, powers)
+            
+            warmup_epochs = self.soft_drc_params.get('warmup_epochs', 30)
 
             if warmup_epochs != 0:
-                warmup_epochs = self.soft_drc_params.get('warmup_epochs', 30)
                 warmup_factor = min(1.0, self.current_epoch / warmup_epochs)
             else:
                 warmup_factor = 1
