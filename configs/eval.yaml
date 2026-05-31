@@ -3,8 +3,9 @@ saving_params:
   img_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Final_Results/Vanilla_CVAE/comparison_test.png"
   result_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Final_Results/Vanilla_CVAE/eval_metrics_test.txt"
   save_visualizations: True
+  num_comparisons: 25
 
 latent_optim:
-  use_lso: False
+  use_lso: True
   steps: 50
   lr: 0.05
