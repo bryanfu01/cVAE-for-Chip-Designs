@@ -173,6 +173,8 @@ class ConditionalVAE(BaseVAE):
         recons_loss = bce / (valid_pixel_count + eps)
 
         # Free bits KLD — guaranteed minimum per dimension (mfu)
+        # Mathematically, this makes the system ignore penalties below 0.5, 
+        # allows for more variation than a strict standard gaussian
         lambda_bits = 0.5
         kld_per_dim = -0.5 * (1 + log_var - mu**2 - log_var.exp())
         free_bits_kld = torch.clamp(kld_per_dim, min=lambda_bits).mean()

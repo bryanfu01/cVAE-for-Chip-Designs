@@ -2,8 +2,9 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import torch
 
-def plot_comparison(original_layout: torch.Tensor, 
-                    target_heatmap: torch.Tensor, 
+def plot_comparison(target_heatmap: torch.Tensor,
+                    simulated_heatmap: torch.Tensor,
+                    original_layout: torch.Tensor,
                     generated_layout: torch.Tensor, 
                     grid_size: int = 64,
                     save_path: str = "comparison.png"):
@@ -11,13 +12,16 @@ def plot_comparison(original_layout: torch.Tensor,
     Generates a side-by-side comparison of the Target Heatmap, 
     the Original Layout, and the VAE's Generated Layout.
     """
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    fig, axes = plt.subplots(1, 4, figsize=(15, 5))
     
     # 1. Plot Target Heat Map
     # Squeeze out the channel dimension for plotting
     im = axes[0].imshow(target_heatmap.squeeze().cpu().numpy(), cmap='inferno', origin='lower')
     axes[0].set_title("Target Heat Map Condition")
     fig.colorbar(im, ax=axes[0], fraction=0.046, pad=0.04)
+    im = axes[1].imshow(simulated_heatmap.squeeze().cpu().numpy(), cmap='inferno', origin='lower')
+    axes[1].set_title("Simulated Heat Map Condition")
+    fig.colorbar(im, ax=axes[1], fraction=0.046, pad=0.04)
 
     # Helper function to draw macros
     def draw_macros(ax, layout_tensor, title):
@@ -42,10 +46,10 @@ def plot_comparison(original_layout: torch.Tensor,
             ax.add_patch(rect)
 
     # 2. Plot Original Layout
-    draw_macros(axes[1], original_layout, "Original Ground Truth Layout")
+    draw_macros(axes[2], original_layout, "Original Ground Truth Layout")
 
     # 3. Plot Generated Layout
-    draw_macros(axes[2], generated_layout, "Generated Legalized Layout")
+    draw_macros(axes[3], generated_layout, "Generated Legalized Layout")
 
     plt.tight_layout()
     plt.savefig(save_path)

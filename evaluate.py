@@ -203,9 +203,10 @@ def main():
                     # output configurable number of comparisons (mfu)
                     if len(comparison_samples) < num_comparisons:
                         comparison_samples.append({
-                        'generated': legal_chip,
-                        'original': ground_truth_layouts[i],
-                        'heatmap': heat_maps[i]
+                        'generated_chip_layout': legal_chip,
+                        'generated_heat_map': simulated_heatmap,
+                        'original_chip_layout': ground_truth_layouts[i],
+                        'original_heatmap': heat_maps[i]
                     })
                     #if vis_generated is None:
                     #    vis_generated = legal_chip
@@ -251,9 +252,10 @@ Legalization Failure Rate:        {failure_rate:.2f}% ({failed_legalizations} un
     for idx, sample in enumerate(comparison_samples): 
         save_path = img_save_path.replace('.png', f'_{idx}.png')
         plot_comparison(
-            sample['original'],
-            sample['heatmap'],
-            sample['generated'],
+            sample['original_heat_map'],
+            sample['generated_heat_map'],
+            sample['original_chip_layout'],
+            sample['generated_chip_layout'],
             grid_size=grid_w,
             save_path=save_path
         )
