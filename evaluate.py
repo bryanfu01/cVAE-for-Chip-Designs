@@ -171,7 +171,7 @@ def main():
                     if len(comparison_samples) < num_comparisons:
                         comparison_samples.append({
                         'generated_chip_layout': legal_chip,
-                        'generated_heat_map': simulated_heatmap,
+                        'generated_heatmap': simulated_heatmap,
                         'original_chip_layout': ground_truth_layouts[i],
                         'original_heatmap': heat_maps[i]
                     })
@@ -225,8 +225,8 @@ Mass Fidelity Test:               {mass_fidelity:.2f}
     for idx, sample in enumerate(comparison_samples): 
         save_path = img_save_path.replace('.png', f'_{idx}.png')
         plot_comparison(
-            sample['original_heat_map'],
-            sample['generated_heat_map'],
+            sample['original_heatmap'],
+            sample['generated_heatmap'],
             sample['original_chip_layout'],
             sample['generated_chip_layout'],
             grid_size=grid_w,

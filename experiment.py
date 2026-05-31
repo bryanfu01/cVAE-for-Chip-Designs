@@ -75,6 +75,11 @@ class VAEXperiment(pl.LightningModule):
             print(f"Input nonzero:   {input_nonzero:.6f}")
             print(f"Recons nonzero:  {recons_nonzero:.6f}")  
 
+            gray_pixels = ((valid_layouts > 0.1) & (valid_layouts < 0.9)).sum().item()
+            total_valid_pixels = valid_mask.sum().item() * H * W
+            gray_ratio = (gray_pixels / total_valid_pixels) * 100
+            print(f"Gray Zone Pixels: {gray_ratio:.2f}% (Should drop to 0%)")
+
             # End (mfu)
 
         train_loss = self.model.loss_function(*results,
@@ -186,6 +191,13 @@ class VAEXperiment(pl.LightningModule):
                 print(f"Raw Soft DRC:     {raw_drc:.4f}")
                 print(f"Warmup Multiplier: {warmup_factor:.4f}")
                 print(f"Effective DRC:    {(raw_drc * warmup_factor + (1 - warmup_factor) * raw_sharpness):.4f}\n")
+
+                normalized_heat = (heat_maps - heat_maps.view(B, -1).min(dim=1)[0].view(B, 1, 1)) / \
+                              (heat_maps.view(B, -1).max(dim=1)[0].view(B, 1, 1) + 1e-8)
+            
+                # Mask layout and multiply by heat
+                actual_thermal_exposure = (valid_layouts * normalized_heat.unsqueeze(1)).sum().item()
+                print(f"Total Heat Exposure: {actual_thermal_exposure:.2f} (Should decay over epochs)")
 
             train_loss['loss'] = self.soft_drc_params.get('vanilla_weight') * train_loss['loss'] + scaled_drc_loss
             
