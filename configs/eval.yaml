@@ -1,10 +1,10 @@
 saving_params:
   # Swap this path when you want to evaluate different ablation models!
-  img_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Soft_DRC_LSO/comparison_test.png"
-  result_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Soft_DRC_LSO/eval_metrics_test.txt"
+  img_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Final_Results/Vanilla_CVAE/comparison_test.png"
+  result_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Final_Results/Vanilla_CVAE/eval_metrics_test.txt"
   save_visualizations: True
 
 latent_optim:
-  use_lso: True
+  use_lso: False
   steps: 50
   lr: 0.05
