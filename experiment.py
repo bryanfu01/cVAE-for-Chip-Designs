@@ -176,7 +176,7 @@ class VAEXperiment(pl.LightningModule):
         if self.soft_drc_params.get('use_soft_drc', False):
             recons = results[0]
             drc_metrics = self.soft_drc_evaluator(recons, heat_maps, powers)
-            
+
             warmup_epochs = self.soft_drc_params.get('warmup_epochs', 30)
 
             if warmup_epochs != 0:
@@ -196,11 +196,8 @@ class VAEXperiment(pl.LightningModule):
                 print(f"Warmup Multiplier: {warmup_factor:.4f}")
                 print(f"Effective DRC:    {(raw_drc * warmup_factor + (1 - warmup_factor) * raw_sharpness):.4f}\n")
 
-                normalized_heat = (heat_maps - heat_maps.view(B, -1).min(dim=1)[0].view(B, 1, 1)) / \
-                              (heat_maps.view(B, -1).max(dim=1)[0].view(B, 1, 1) + 1e-8)
-            
                 # Mask layout and multiply by heat
-                actual_thermal_exposure = (valid_layouts * normalized_heat.unsqueeze(1)).sum().item()
+                actual_thermal_exposure = (valid_layouts * heat_maps.unsqueeze(1)).sum().item()
                 print(f"Total Heat Exposure: {actual_thermal_exposure:.2f} (Should decay over epochs)")
 
             train_loss['loss'] = self.soft_drc_params.get('vanilla_weight') * train_loss['loss'] + scaled_drc_loss
