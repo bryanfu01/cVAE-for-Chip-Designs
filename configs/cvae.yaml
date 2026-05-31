@@ -29,7 +29,7 @@ soft_drc_params:
 trainer_params:
   accelerator: "gpu" 
   devices: 1          
-  resume_ckpt_path: "/content/drive/MyDrive/ECE_175B_Final_Project/golden_vanilla_weights"
+  resume_ckpt_path: "/content/drive/MyDrive/ECE_175B_Final_Project/golden_vanilla_weights.ckpt"
   limit_train_batches: 0.1
   limit_val_batches: 0.1
   max_epochs: 15
