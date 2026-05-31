@@ -77,11 +77,33 @@ print(f"======= Training {config['model_params']['name']} =======")
 
 # Start training, resuming safely from your Google Drive checkpoint
 
-if resume_path:
-    print(f"Resuming training from: {resume_path}")
+# Start training, resuming safely from your Google Drive checkpoint
+
+golden_path = "/content/drive/MyDrive/ECE_175B_Final_Project/golden_vanilla_weights.ckpt"
+
+if resume_path == golden_path:
+    print(f"Loading GOLDEN WEIGHTS from: {resume_path}")
+    print("Initiating Stage 2 Physics Fine-Tuning (Starting at Epoch 0)...")
+    # weights_only=True forces the Trainer to drop the old Adam optimizer and epoch counter
+    runner.fit(
+        experiment, 
+        datamodule=data, 
+        ckpt_path=resume_path, 
+        weights_only=True
+    )
+    
+elif resume_path:
+    print(f"Resuming standard training from: {resume_path}")
+    # No weights_only flag: This fully restores the optimizer momentum and epoch counter!
+    runner.fit(
+        experiment, 
+        datamodule=data, 
+        ckpt_path=resume_path
+    )
+    
 else:
     print("No resume path provided. Starting fresh training...")
-
-runner.fit(experiment, 
-           datamodule=data, 
-           ckpt_path=resume_path)
+    runner.fit(
+        experiment, 
+        datamodule=data
+    )
