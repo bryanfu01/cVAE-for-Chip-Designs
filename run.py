@@ -9,13 +9,11 @@ import torch.backends.cudnn as cudnn
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
-from pytorch_lightning.callbacks import ModelCheckpoint
 
 # Local Project Imports
 from models import *
 from experiment import VAEXperiment
 from dataset import VAEDataset
-from callback import DriveSyncCallback
 
 parser = argparse.ArgumentParser(description='Generic runner for VAE models')
 parser.add_argument('--config',  '-c',
@@ -62,31 +60,14 @@ data = VAEDataset(**config["data_params"], pin_memory=use_gpu)
 data.setup()
 
 resume_path = config['trainer_params'].pop('resume_ckpt_path', None)
-
-local_save_path = config['logging_params']['local_save_dir']
-drive_save_path = config['logging_params']['drive_save_dir']
-
-# 1. Standard checkpointing (Saves extremely fast to local Colab disk)
-checkpoint_callback = ModelCheckpoint(
-    dirpath=local_save_path,
-    save_top_k=1,
-    monitor="val_loss",
-    save_last=True, # You can turn this back to True now!
-)
-
-# 2. Our custom safe-sync to Google Drive (e.g., every 5 epochs)
-drive_sync = DriveSyncCallback(
-    local_dir=local_save_path,
-    drive_dir=drive_save_path,
-    sync_every_n_epochs=10  # Adjust based on how fast your epochs run
-)
-
-
+# Trainer initialized without the deprecated DDPPlugin
 runner = Trainer(logger=tb_logger,
                  callbacks=[
                      LearningRateMonitor(),
-                     checkpoint_callback,
-                     drive_sync
+                     ModelCheckpoint(save_top_k=2, 
+                                     dirpath=os.path.join(tb_logger.log_dir , "checkpoints"), 
+                                     monitor="val_loss",
+                                     save_last=True),
                  ],
                  **config['trainer_params'])
 
@@ -136,3 +117,11 @@ else:
         experiment, 
         datamodule=data
     )
+
+local_save_dir = "/content/checkpoints/"
+drive_save_dir = "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/"
+
+print("Training complete. Syncing checkpoints to Google Drive...")
+if os.path.exists(local_save_dir):
+    shutil.copytree(local_save_dir, drive_save_dir, dirs_exist_ok=True)
+    print("Sync complete!")

@@ -35,8 +35,6 @@ trainer_params:
   max_epochs: 120
 
 logging_params:
-  local_save_dir: "/content/checkpoints/"
-  drive_sav_dir: "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/"
-
+  save_dir: "/content/checkpoints/"
 
   
