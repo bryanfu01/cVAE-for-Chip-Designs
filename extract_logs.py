@@ -2,77 +2,81 @@ import os
 import matplotlib.pyplot as plt
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-def extract_and_plot_tb_logs(log_dir, save_path="/content/drive/MyDrive/ECE_175B_Final_Project/vanilla_loss_curves.png"):
+def extract_and_plot_tb_logs(log_dir, save_path="/content/drive/MyDrive/ECE_175B_Final_Project/soft_drc_loss_curves.png"):
     print(f"Loading TensorBoard logs from: {log_dir}")
     
-    # Initialize the event accumulator
     event_acc = EventAccumulator(log_dir, size_guidance={'scalars': 0})
     event_acc.Reload()
 
     available_tags = event_acc.Tags()['scalars']
     print(f"Found metrics: {available_tags}")
     
-    # 1. Build a Step-to-Epoch mapping
+    # Build Step-to-Epoch mapping
     step_to_epoch = {}
     if 'epoch' in available_tags:
         for e in event_acc.Scalars('epoch'):
             step_to_epoch[e.step] = e.value
-    else:
-        print("Warning: 'epoch' tag not found. PyTorch Lightning may not have logged it.")
-        
-    # Helper to forward-fill epochs for steps that didn't log an exact epoch scalar
+            
     def get_epoch(step):
         if not step_to_epoch: return step
         if step in step_to_epoch: return step_to_epoch[step]
-        # Find the most recent epoch prior to this step
         past_steps = [s for s in step_to_epoch.keys() if s <= step]
         return step_to_epoch[max(past_steps)] if past_steps else 0
 
-    target_metrics = ['Reconstruction_Loss', 'KLD', 'loss', 'val_loss']
-    history = {}
+    # Define the two categories of metrics to track
+    base_metrics = ['loss', 'val_loss', 'Reconstruction_Loss', 'KLD']
     
-    for tag in target_metrics:
-        if tag in available_tags:
-            events = event_acc.Scalars(tag)
-            # Apply our mapping to shift the x-axis to Epochs
+    # UPDATE THESE names to match exactly what you pass to self.log() in experiment.py
+    physics_metrics = ['Area_Loss', 'Overlap_Loss', 'Thermal_Loss', 'Sharpness_Loss', 'Cohesion_Loss', 'Scaled_DRC_Loss']
+    
+    history = {}
+    for tag in base_metrics + physics_metrics:
+        # Sometimes Lightning prepends 'train/' or 'val/' to custom logs
+        actual_tags = [t for t in available_tags if tag in t]
+        for act_tag in actual_tags:
+            events = event_acc.Scalars(act_tag)
             epochs = [get_epoch(e.step) for e in events]
             values = [e.value for e in events]
-            history[tag] = {'epochs': epochs, 'values': values}
+            
+            # Flip negative KLD for standard viewing
+            if 'KLD' in act_tag:
+                values = [-v for v in values]
+                
+            history[act_tag] = {'epochs': epochs, 'values': values}
 
-    # --- Plotting the Curves ---
-    plt.figure(figsize=(15, 5))
+    # --- Plotting Architecture ---
+    if not history:
+        print("No matching metrics found to plot.")
+        return
+
+    # Calculate grid size dynamically based on how many metrics we found
+    num_plots = len(history)
+    cols = 3
+    rows = math.ceil(num_plots / cols)
     
-    # 1. Total Loss Curve
-    plt.subplot(1, 3, 1)
-    if 'loss' in history:
-        plt.plot(history['loss']['epochs'], history['loss']['values'], label='Train Loss', alpha=0.8)
-    if 'val_loss' in history:
-        plt.plot(history['val_loss']['epochs'], history['val_loss']['values'], label='Val Loss', alpha=0.8)
-    plt.title("Total VAE Loss")
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss")
-    plt.legend()
-    plt.grid(True, alpha=0.3)
+    fig, axes = plt.subplots(rows, cols, figsize=(cols * 5, rows * 4))
+    axes = axes.flatten() # Make indexing easier
+    
+    for i, (metric_name, data) in enumerate(history.items()):
+        ax = axes[i]
+        
+        # Color coding: Green for Recon, Purple for KLD, Red/Orange for Physics
+        color = 'blue'
+        if 'Reconstruction' in metric_name: color = 'green'
+        elif 'KLD' in metric_name: color = 'purple'
+        elif any(p in metric_name for p in physics_metrics): color = 'tomato'
+            
+        ax.plot(data['epochs'], data['values'], color=color, linewidth=2)
+        
+        # Formatting
+        ax.set_title(metric_name.replace('train/', '').replace('val/', ''), fontsize=12, fontweight='bold')
+        ax.set_xlabel("Epochs")
+        ax.set_ylabel("Value")
+        ax.grid(True, alpha=0.3)
 
-    # 2. Reconstruction Loss
-    plt.subplot(1, 3, 2)
-    if 'Reconstruction_Loss' in history:
-        plt.plot(history['Reconstruction_Loss']['epochs'], history['Reconstruction_Loss']['values'], color='green')
-    plt.title("Reconstruction Loss (BCE)")
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss")
-    plt.grid(True, alpha=0.3)
-
-    # 3. KLD (Free Bits)
-    plt.subplot(1, 3, 3)
-    if 'KLD' in history:
-        # Flip negative KLD to positive for standard viewing
-        kld_vals = [-v for v in history['KLD']['values']]
-        plt.plot(history['KLD']['epochs'], kld_vals, color='purple')
-    plt.title("KL Divergence")
-    plt.xlabel("Epochs")
-    plt.ylabel("KLD")
-    plt.grid(True, alpha=0.3)
+    # Hide any unused subplots
+    for j in range(i + 1, len(axes)):
+        fig.delaxes(axes[j])
 
     plt.tight_layout()
     plt.savefig(save_path, dpi=300)
@@ -81,6 +85,6 @@ def extract_and_plot_tb_logs(log_dir, save_path="/content/drive/MyDrive/ECE_175B
 
 if __name__ == "__main__":
     # CHANGE THIS to the folder containing your vanilla run's events.out.tfevents file
-    VANILLA_LOG_DIR = "/content/drive/MyDrive/ECE_175B_Final_Project/events.out.tfevents.1780167905.193acaa2b160.5213.0" 
+    SOFT_DRC_LOG_DIR = "/content/checkpoints/ConditionalVAE/version_0/events.out.tfevents.1780351797.05ddb3851851.26722.0"
     
-    extract_and_plot_tb_logs(VANILLA_LOG_DIR)
+    extract_and_plot_tb_logs(SOFT_DRC_LOG_DIR)
