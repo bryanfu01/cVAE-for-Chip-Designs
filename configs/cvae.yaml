@@ -21,7 +21,7 @@ soft_drc_params:
   area_weight: 100.0
   thermal_weight: 50.0
   target_area: 100.0
-  sharpness_weight: 0.0
+  sharpness_weight: 3000.0
   cohesion_weight: 0.0
   vanilla_weight: 3000.0
   warmup_epochs: 0.0
