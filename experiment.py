@@ -62,10 +62,10 @@ class VAEXperiment(pl.LightningModule):
             # Check the average "mass" of the continuous macros. 
             # If target_area is 100, this should ideally climb toward 100 over time.
             B, C, H, W = recons_probe.shape
-            valid_mask = (powers != -1.0).view(B, C, 1, 1).float().to(self.device)
-            valid_layouts = recons_probe * valid_mask
-            mean_mass = valid_layouts.sum(dim=(2, 3)).mean().item()
-            print(f"Mean Macro Mass:  {mean_mass:.2f}")
+            valid_boolean_mask = (powers != -1.0)
+            true_valid_macros = recons_probe[valid_boolean_mask]
+            mean_mass = true_valid_macros.sum(dim=(1, 2)).mean().item()
+            print(f"Mean Macro Mass:  {mean_mass:.2f} (True Mass)")
             
             # Debugging: output distribution and sparsity (mfu)
             counts = torch.histc(recons_probe, bins=10, min=0.0, max=1.0)
