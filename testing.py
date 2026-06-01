@@ -1,42 +1,38 @@
 import torch
 
-def test_form_penalties():
-    print("--- Testing Form Penalties (Dilution Bug) ---")
+def test_sharpness_gradients():
+    print("--- Testing Sharpness Penalties (BCE vs Quadratic) ---")
+    print("Observe what happens to the gradients as a pixel gets close to 0 or 1.")
     
-    B, C, H, W = 1, 1, 64, 64
+    # Test probabilities from 0.5 (center) out to 0.999 (near perfect binary)
+    probs = torch.tensor([0.5, 0.8, 0.9, 0.99, 0.999], requires_grad=True)
     
-    # 1. Solid Box (10x10) - Target mass 100
-    solid = torch.zeros(B, C, H, W)
-    solid[0, 0, 10:20, 10:20] = 1.0
+    print(f"{'Prob':<10} | {'BCE Gradient':<15} | {'Quadratic Gradient':<20}")
+    print("-" * 50)
     
-    # 2. Confetti (100 individual pixels spread out) - Target mass 100
-    confetti = torch.zeros(B, C, H, W)
-    for i in range(10):
-        for j in range(10):
-            confetti[0, 0, i*4, j*4] = 1.0 
-            
-    # --- CURRENT COHESION (The Dilution Bug) ---
-    def current_cohesion(layouts):
-        diff_h = torch.abs(layouts[:, :, 1:, :] - layouts[:, :, :-1, :])
-        diff_w = torch.abs(layouts[:, :, :, 1:] - layouts[:, :, :, :-1])
-        return diff_h.mean() + diff_w.mean()
-
-    # --- UPGRADED COHESION (True Edge Count) ---
-    def upgraded_cohesion(layouts):
-        diff_h = torch.abs(layouts[:, :, 1:, :] - layouts[:, :, :-1, :])
-        diff_w = torch.abs(layouts[:, :, :, 1:] - layouts[:, :, :, :-1])
-        # Sum over spatial grid (H, W), then mean over Batch (B) and Channels (C)
-        return diff_h.sum(dim=(2, 3)).mean() + diff_w.sum(dim=(2, 3)).mean()
+    for p_val in probs:
+        p_bce = p_val.clone().detach().requires_grad_(True)
+        p_quad = p_val.clone().detach().requires_grad_(True)
         
-    print(f"\n[CURRENT COHESION - Diluted by 64x64 grid]")
-    print(f"Solid Box Loss: {current_cohesion(solid).item():.6f}")
-    print(f"Confetti Loss:  {current_cohesion(confetti).item():.6f}")
-    print(f"Gradient Push:  {current_cohesion(confetti).item() - current_cohesion(solid).item():.6f} (Optimizer ignores this!)")
-
-    print(f"\n[UPGRADED COHESION - Physical Perimeter Count]")
-    print(f"Solid Box Loss: {upgraded_cohesion(solid).item():.2f} (Exactly 40 physical edges!)")
-    print(f"Confetti Loss:  {upgraded_cohesion(confetti).item():.2f} (Exactly 400 physical edges!)")
-    print(f"Gradient Push:  {upgraded_cohesion(confetti).item() - upgraded_cohesion(solid).item():.2f} (Massive signal!)")
+        # 1. BCE Loss
+        eps = 1e-8
+        bce_loss = -(p_bce * torch.log(p_bce + eps) + (1.0 - p_bce) * torch.log(1.0 - p_bce + eps))
+        bce_loss.backward()
+        
+        # 2. Quadratic Loss
+        quad_loss = p_quad * (1.0 - p_quad)
+        quad_loss.backward()
+        
+        # We print the absolute magnitude of the gradient (the "force" the optimizer feels)
+        bce_force = abs(p_bce.grad.item())
+        quad_force = abs(p_quad.grad.item())
+        
+        print(f"{p_val.item():<10.3f} | {bce_force:<15.4f} | {quad_force:<20.4f}")
+        
+    print("\nCONCLUSION:")
+    print("As probability approaches 1.0:")
+    print("- Quadratic gradient drops safely to 0.0 (It settles peacefully).")
+    print("- BCE gradient EXPLODES toward infinity (It violently shatters shapes!).")
 
 if __name__ == "__main__":
-    test_form_penalties()
+    test_sharpness_gradients()
