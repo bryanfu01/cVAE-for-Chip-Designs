@@ -72,6 +72,6 @@ def extract_and_plot_tb_logs(log_dir, save_path="/content/drive/MyDrive/ECE_175B
 
 if __name__ == "__main__":
     # CHANGE THIS to the folder containing your vanilla run's events.out.tfevents file
-    VANILLA_LOG_DIR = "/content/drive/MyDrive/ECE_175B_Final_Project/golden_weight_logs.0" 
+    VANILLA_LOG_DIR = "/content/drive/MyDrive/ECE_175B_Final_Project/events.out.tfevents.1780167905.193acaa2b160.5213.0" 
     
     extract_and_plot_tb_logs(VANILLA_LOG_DIR)
