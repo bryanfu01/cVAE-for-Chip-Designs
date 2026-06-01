@@ -1,4 +1,5 @@
 import os
+import shutil
 import yaml
 import argparse
 from pathlib import Path
@@ -116,3 +117,11 @@ else:
         experiment, 
         datamodule=data
     )
+
+local_save_dir = "/content/checkpoints/"
+drive_save_dir = "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/"
+
+print("Training complete. Syncing checkpoints to Google Drive...")
+if os.path.exists(local_save_dir):
+    shutil.copytree(local_save_dir, drive_save_dir, dirs_exist_ok=True)
+    print("Sync complete!")
