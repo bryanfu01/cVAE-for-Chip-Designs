@@ -174,9 +174,19 @@ class VAEXperiment(pl.LightningModule):
         # End (mfu)
         
         if self.soft_drc_params.get('use_soft_drc', False):
-            recons = results[0]
-            drc_metrics = self.soft_drc_evaluator(recons, heat_maps, powers)
+            z_detached = results[4].detach()
 
+            # Re-decode using the detached z. 
+            # We format the input exactly like you do in evaluate.py
+            batch_size = z_detached.size(0)
+            flat_condition = heat_maps.view(batch_size, -1)
+            
+            # This generates a NEW reconstruction tensor that is entirely disconnected from the Encoder
+            recons_physics = self.model.decode(torch.cat([z_detached, flat_condition], dim=1))
+
+            # Pass the DETACHED reconstruction to the physics engine
+            drc_metrics = self.soft_drc_evaluator(recons_physics, heat_maps, powers)
+            
             warmup_epochs = self.soft_drc_params.get('warmup_epochs', 30)
 
             if warmup_epochs != 0:
