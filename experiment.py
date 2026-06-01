@@ -76,8 +76,9 @@ class VAEXperiment(pl.LightningModule):
             print(f"Recons nonzero:  {recons_nonzero:.6f}")  
 
             gray_pixels = ((valid_layouts > 0.1) & (valid_layouts < 0.9)).sum().item()
-            total_valid_pixels = valid_mask.sum().item() * H * W
-            gray_ratio = (gray_pixels / total_valid_pixels) * 100
+            total_valid_pixels = valid_layouts.numel() 
+            
+            gray_ratio = (gray_pixels / total_valid_pixels) * 100 if total_valid_pixels > 0 else 0.0
             print(f"Gray Zone Pixels: {gray_ratio:.2f}% (Should drop to 0%)")
 
             # End (mfu)
