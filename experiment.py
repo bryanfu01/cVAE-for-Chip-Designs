@@ -63,8 +63,8 @@ class VAEXperiment(pl.LightningModule):
             # If target_area is 100, this should ideally climb toward 100 over time.
             B, C, H, W = recons_probe.shape
             valid_boolean_mask = (powers != -1.0)
-            true_valid_macros = recons_probe[valid_boolean_mask]
-            mean_mass = true_valid_macros.sum(dim=(1, 2)).mean().item()
+            valid_layouts = recons_probe[valid_boolean_mask]
+            mean_mass = valid_layouts.sum(dim=(1, 2)).mean().item()
             print(f"Mean Macro Mass:  {mean_mass:.2f} (True Mass)")
             
             # Debugging: output distribution and sparsity (mfu)
