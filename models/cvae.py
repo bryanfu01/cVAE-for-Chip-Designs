@@ -142,7 +142,7 @@ class ConditionalVAE(BaseVAE):
         B = condition.size(0)
         flat_condition = condition.view(B, -1)
         decoder_input = torch.cat([z, flat_condition], dim=1)
-        return  [self.decode(decoder_input), input, mu, log_var, z]
+        return  [self.decode(decoder_input), input, mu, log_var]
 
     # Change to BCE-based loss function that doesn't consider padded channels, i.e. channels that don't have macros. Implement minimum free bits methodology to insist on information encoded in z (mfu)
     def loss_function(self, *args, **kwargs) -> dict:
