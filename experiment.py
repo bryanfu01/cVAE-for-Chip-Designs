@@ -186,7 +186,7 @@ class VAEXperiment(pl.LightningModule):
 
             # Pass the DETACHED reconstruction to the physics engine
             drc_metrics = self.soft_drc_evaluator(recons_physics, heat_maps, powers)
-            
+
             warmup_epochs = self.soft_drc_params.get('warmup_epochs', 30)
 
             if warmup_epochs != 0:
@@ -207,7 +207,7 @@ class VAEXperiment(pl.LightningModule):
                 print(f"Effective DRC:    {(raw_drc * warmup_factor + (1 - warmup_factor) * raw_sharpness):.4f}\n")
 
                 # Mask layout and multiply by heat
-                actual_thermal_exposure = (valid_layouts * heat_maps.unsqueeze(1)).sum().item()
+                actual_thermal_exposure = (valid_layouts * heat_maps).sum().item()
                 print(f"Total Heat Exposure: {actual_thermal_exposure:.2f} (Should decay over epochs)")
 
             train_loss['loss'] = self.soft_drc_params.get('vanilla_weight') * train_loss['loss'] + scaled_drc_loss
