@@ -43,14 +43,11 @@ class SoftDRC(nn.Module):
 
         valid_mask = (macro_powers != -1.0).view(B, C, 1, 1).float().to(self.device)
         continuous_layouts = continuous_layouts.to(self.device)
-        valid_layouts = continuous_layouts * valid_mask
+        valid_layouts = continuous_layouts[valid_mask]
 
         macro_masses = valid_layouts.sum(dim=(2, 3)) 
         
-        # 1. Target area should be 100.0 for real macros, but 0.0 for padded macros!
-        target_areas = torch.where(macro_powers != -1.0, 
-                                   torch.full_like(macro_masses, self.target_area), 
-                                   torch.zeros_like(macro_masses))
+        target_areas = torch.full_like(macro_masses, self.target_area)
         
         return F.mse_loss(macro_masses, target_areas)
     
@@ -83,7 +80,7 @@ class SoftDRC(nn.Module):
     def _calculate_sharpness_penalty(self, continuous_layouts: torch.Tensor, macro_powers: torch.Tensor) -> torch.Tensor:
         B, C, H, W = continuous_layouts.shape
         valid_mask = (macro_powers != -1.0).view(B, C, 1, 1).float().to(self.device)
-        valid_layouts = continuous_layouts * valid_mask
+        valid_layouts = continuous_layouts[valid_mask]
         
         # Penalizes values near 0.5. The penalty drops to 0 at exactly 0.0 or 1.0.
         parabola = valid_layouts * (1.0 - valid_layouts)
@@ -96,7 +93,7 @@ class SoftDRC(nn.Module):
         """
         B, C, H, W = continuous_layouts.shape
         valid_mask = (macro_powers != -1.0).view(B, C, 1, 1).float().to(self.device)
-        valid_layouts = continuous_layouts * valid_mask
+        valid_layouts = continuous_layouts[valid_mask]
 
         # Calculate differences between adjacent pixels (finding the edges)
         diff_h = torch.abs(valid_layouts[:, :, 1:, :] - valid_layouts[:, :, :-1, :])
