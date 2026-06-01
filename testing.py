@@ -1,38 +1,40 @@
 import torch
+import torch.nn.functional as F
 
-def test_sharpness_gradients():
-    print("--- Testing Sharpness Penalties (BCE vs Quadratic) ---")
-    print("Observe what happens to the gradients as a pixel gets close to 0 or 1.")
+def test_area_mass_dilution():
+    B, C, H, W = 2, 12, 64, 64
     
-    # Test probabilities from 0.5 (center) out to 0.999 (near perfect binary)
-    probs = torch.tensor([0.5, 0.8, 0.9, 0.99, 0.999], requires_grad=True)
+    # Simulate exactly 10 valid macros per batch, each perfectly 100 mass
+    macro_powers = -1.0 * torch.ones(B, C)
+    macro_powers[0, :10] = 0.5  # 10 valid in chip 1
+    macro_powers[1, :10] = 0.5  # 10 valid in chip 2
     
-    print(f"{'Prob':<10} | {'BCE Gradient':<15} | {'Quadratic Gradient':<20}")
-    print("-" * 50)
+    continuous_layouts = torch.zeros(B, C, H, W)
+    for i in range(10):
+        # Draw perfect 10x10 solid boxes (Mass = 100)
+        continuous_layouts[0, i, 10:20, 10:20] = 1.0 
+        continuous_layouts[1, i, 10:20, 10:20] = 1.0 
+        
+    print("--- Testing Area Penalty & Probe Calculations ---\n")
     
-    for p_val in probs:
-        p_bce = p_val.clone().detach().requires_grad_(True)
-        p_quad = p_val.clone().detach().requires_grad_(True)
-        
-        # 1. BCE Loss
-        eps = 1e-8
-        bce_loss = -(p_bce * torch.log(p_bce + eps) + (1.0 - p_bce) * torch.log(1.0 - p_bce + eps))
-        bce_loss.backward()
-        
-        # 2. Quadratic Loss
-        quad_loss = p_quad * (1.0 - p_quad)
-        quad_loss.backward()
-        
-        # We print the absolute magnitude of the gradient (the "force" the optimizer feels)
-        bce_force = abs(p_bce.grad.item())
-        quad_force = abs(p_quad.grad.item())
-        
-        print(f"{p_val.item():<10.3f} | {bce_force:<15.4f} | {quad_force:<20.4f}")
-        
-    print("\nCONCLUSION:")
-    print("As probability approaches 1.0:")
-    print("- Quadratic gradient drops safely to 0.0 (It settles peacefully).")
-    print("- BCE gradient EXPLODES toward infinity (It violently shatters shapes!).")
+    # 1. The Flawed Probe Calculation (Currently in experiment.py)
+    valid_mask_mult = (macro_powers != -1.0).view(B, C, 1, 1).float()
+    valid_layouts_mult = continuous_layouts * valid_mask_mult
+    diluted_mean = valid_layouts_mult.sum(dim=(2, 3)).mean().item()
+    print(f"[CURRENT PROBE] Falsely reported mean mass: {diluted_mean:.2f}")
+    print(f"                (Math: 10 valid / 12 total * 100 = 83.33)\n")
+    
+    # 2. The Upgraded Logic (Using your Boolean Indexing)
+    valid_boolean_mask = (macro_powers != -1.0)
+    true_valid_macros = continuous_layouts[valid_boolean_mask]
+    true_mean = true_valid_macros.sum(dim=(1, 2)).mean().item()
+    print(f"[TRUE METRIC]   Actual network mean mass: {true_mean:.2f}")
+    print(f"                (The boolean mask drops the padding!)\n")
+    
+    # 3. Prove the Area Penalty Works
+    target_areas = torch.full_like(true_valid_macros.sum(dim=(1, 2)), 100.0)
+    area_loss = F.mse_loss(true_valid_macros.sum(dim=(1, 2)), target_areas)
+    print(f"[AREA ENGINE]   MSE Loss for perfectly drawn boxes: {area_loss.item():.4f}")
 
-if __name__ == "__main__":
-    test_sharpness_gradients()
+if __name__ == '__main__':
+    test_area_mass_dilution()
