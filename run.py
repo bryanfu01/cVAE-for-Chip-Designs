@@ -122,6 +122,20 @@ local_save_dir = "/content/checkpoints/"
 drive_save_dir = "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/"
 
 print("Training complete. Syncing checkpoints to Google Drive...")
-if os.path.exists(local_save_dir):
-    shutil.copytree(local_save_dir, drive_save_dir, dirs_exist_ok=True)
+
+# Dynamically grab the exact folder Lightning just used for this specific run
+actual_run_dir = tb_logger.log_dir 
+
+# Define your main Drive target
+drive_save_dir = "/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/"
+
+# Create a matching version folder in Drive so it stays organized
+# e.g. .../Vanilla_CVAE_Checkpoints/ConditionalVAE/version_42
+target_drive_dir = os.path.join(drive_save_dir, config['model_params']['name'], f"version_{tb_logger.version}")
+
+if os.path.exists(actual_run_dir):
+    print(f"Copying from {actual_run_dir} -> {target_drive_dir}")
+    shutil.copytree(actual_run_dir, target_drive_dir, dirs_exist_ok=True)
     print("Sync complete!")
+else:
+    print("Error: Could not find the local save directory.")
