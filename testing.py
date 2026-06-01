@@ -1,39 +1,42 @@
 import torch
-from core_engines.soft_drcs import SoftDRC
 
-def test_area_penalty():
-    print("--- Testing Area Penalty ---")
-    # Initialize DRC engine
-    drc = SoftDRC(area_weight=1.0, target_area=100.0)
+def test_form_penalties():
+    print("--- Testing Form Penalties (Dilution Bug) ---")
     
-    # Create a batch of 2 chips: 
-    # Chip 0: Macro mass is 50 (Penalty expected: (50-100)^2 = 2500)
-    # Chip 1: Macro mass is 100 (Penalty expected: 0)
-    B, C, H, W = 2, 1, 64, 64
-    continuous_layouts = torch.zeros(B, C, H, W)
+    B, C, H, W = 1, 1, 64, 64
     
-    # Fill Chip 0 with 50 pixels of mass (value 1.0)
-    continuous_layouts[0, 0, :50, 0] = 1.0 
+    # 1. Solid Box (10x10) - Target mass 100
+    solid = torch.zeros(B, C, H, W)
+    solid[0, 0, 10:20, 10:20] = 1.0
     
-    # Fill Chip 1 with 100 pixels of mass (value 1.0)
-    continuous_layouts[1, 0, :10, :10] = 1.0
-    
-    # Define macro powers: -1.0 means padding, 1.0 means active
-    macro_powers = torch.tensor([[-1.0], [-1.0]])
-    device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
-    
-    # Calculate penalty
-    penalty = drc._calculate_area_penalty(continuous_layouts, macro_powers.to(device))
-    
-    print(f"Computed MSE Penalty: {penalty.item():.4f}")
-    
-    # Verify expectations
-    expected_penalty = ( (50 - 100)**2 + (100 - 100)**2 ) / 2
-    if torch.isclose(penalty, torch.tensor(float(expected_penalty))):
-        print("SUCCESS: Area penalty math is correct.")
-    else:
-        print(f"FAILURE: Expected {expected_penalty}, got {penalty.item()}")
+    # 2. Confetti (100 individual pixels spread out) - Target mass 100
+    confetti = torch.zeros(B, C, H, W)
+    for i in range(10):
+        for j in range(10):
+            confetti[0, 0, i*4, j*4] = 1.0 
+            
+    # --- CURRENT COHESION (The Dilution Bug) ---
+    def current_cohesion(layouts):
+        diff_h = torch.abs(layouts[:, :, 1:, :] - layouts[:, :, :-1, :])
+        diff_w = torch.abs(layouts[:, :, :, 1:] - layouts[:, :, :, :-1])
+        return diff_h.mean() + diff_w.mean()
 
-# Run the test
+    # --- UPGRADED COHESION (True Edge Count) ---
+    def upgraded_cohesion(layouts):
+        diff_h = torch.abs(layouts[:, :, 1:, :] - layouts[:, :, :-1, :])
+        diff_w = torch.abs(layouts[:, :, :, 1:] - layouts[:, :, :, :-1])
+        # Sum over spatial grid (H, W), then mean over Batch (B) and Channels (C)
+        return diff_h.sum(dim=(2, 3)).mean() + diff_w.sum(dim=(2, 3)).mean()
+        
+    print(f"\n[CURRENT COHESION - Diluted by 64x64 grid]")
+    print(f"Solid Box Loss: {current_cohesion(solid).item():.6f}")
+    print(f"Confetti Loss:  {current_cohesion(confetti).item():.6f}")
+    print(f"Gradient Push:  {current_cohesion(confetti).item() - current_cohesion(solid).item():.6f} (Optimizer ignores this!)")
+
+    print(f"\n[UPGRADED COHESION - Physical Perimeter Count]")
+    print(f"Solid Box Loss: {upgraded_cohesion(solid).item():.2f} (Exactly 40 physical edges!)")
+    print(f"Confetti Loss:  {upgraded_cohesion(confetti).item():.2f} (Exactly 400 physical edges!)")
+    print(f"Gradient Push:  {upgraded_cohesion(confetti).item() - upgraded_cohesion(solid).item():.2f} (Massive signal!)")
+
 if __name__ == "__main__":
-    test_area_penalty()
+    test_form_penalties()
