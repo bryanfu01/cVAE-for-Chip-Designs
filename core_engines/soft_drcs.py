@@ -45,7 +45,7 @@ class SoftDRC(nn.Module):
         continuous_layouts = continuous_layouts.to(self.device)
         valid_layouts = continuous_layouts[valid_mask]
 
-        macro_masses = valid_layouts.sum(dim=(2, 3)) 
+        macro_masses = valid_layouts.sum(dim=(1, 2)) 
         
         target_areas = torch.full_like(macro_masses, self.target_area)
         
@@ -84,7 +84,7 @@ class SoftDRC(nn.Module):
         
         # Penalizes values near 0.5. The penalty drops to 0 at exactly 0.0 or 1.0.
         parabola = valid_layouts * (1.0 - valid_layouts)
-        return parabola.sum(dim=(2, 3)).mean()
+        return parabola.sum(dim=(1, 2)).mean()
     
     def _calculate_cohesion_penalty(self, continuous_layouts: torch.Tensor, macro_powers: torch.Tensor) -> torch.Tensor:
         """
@@ -99,7 +99,7 @@ class SoftDRC(nn.Module):
         diff_h = torch.abs(valid_layouts[:, :, 1:, :] - valid_layouts[:, :, :-1, :])
         diff_w = torch.abs(valid_layouts[:, :, :, 1:] - valid_layouts[:, :, :, :-1])
 
-        return diff_h.sum(dim=(2, 3)).mean() + diff_w.sum(dim=(2, 3)).mean()
+        return diff_h.sum(dim=(1, 2)).mean() + diff_w.sum(dim=(1, 2)).mean()
 
     def forward(self, continuous_layouts: torch.Tensor, target_heatmaps: torch.Tensor, macro_powers: torch.Tensor) -> dict:
         
