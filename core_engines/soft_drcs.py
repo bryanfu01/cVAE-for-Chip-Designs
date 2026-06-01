@@ -41,7 +41,7 @@ class SoftDRC(nn.Module):
     def _calculate_area_penalty(self, continuous_layouts: torch.Tensor, macro_powers: torch.Tensor) -> torch.Tensor:
         B, C, H, W = continuous_layouts.shape
 
-        valid_mask = (macro_powers != -1.0).view(B, C, 1, 1).float().to(self.device)
+        valid_mask = (macro_powers != -1.0).view(B, C, 1, 1).to(self.device)
         continuous_layouts = continuous_layouts.to(self.device)
         valid_layouts = continuous_layouts[valid_mask]
 
@@ -79,7 +79,7 @@ class SoftDRC(nn.Module):
     
     def _calculate_sharpness_penalty(self, continuous_layouts: torch.Tensor, macro_powers: torch.Tensor) -> torch.Tensor:
         B, C, H, W = continuous_layouts.shape
-        valid_mask = (macro_powers != -1.0).view(B, C, 1, 1).float().to(self.device)
+        valid_mask = (macro_powers != -1.0).view(B, C, 1, 1).to(self.device)
         valid_layouts = continuous_layouts[valid_mask]
         
         # Penalizes values near 0.5. The penalty drops to 0 at exactly 0.0 or 1.0.
@@ -92,7 +92,7 @@ class SoftDRC(nn.Module):
         edges of the probability distributions. Forces macros to clump into solid shapes.
         """
         B, C, H, W = continuous_layouts.shape
-        valid_mask = (macro_powers != -1.0).view(B, C, 1, 1).float().to(self.device)
+        valid_mask = (macro_powers != -1.0).view(B, C, 1, 1).to(self.device)
         valid_layouts = continuous_layouts[valid_mask]
 
         # Calculate differences between adjacent pixels (finding the edges)
