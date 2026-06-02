@@ -84,14 +84,20 @@ golden_path = "/content/drive/MyDrive/ECE_175B_Final_Project/golden_vanilla_weig
 
 if resume_path == golden_path:
     print(f"Loading GOLDEN WEIGHTS from: {resume_path}")
-    print("Initiating Stage 2 Physics Fine-Tuning (Starting at Epoch 0)...")
-    # weights_only=True forces the Trainer to drop the old Adam optimizer and epoch counter
-
+    print("Initiating Stage 2 Physics Fine-Tuning with ALM (Starting at Epoch 0)...")
+    
+    # 1. Manually load the weights with strict=False to bypass the missing ALM keys
+    checkpoint = torch.load(resume_path, map_location=lambda storage, loc: storage)
+    experiment.load_state_dict(checkpoint['state_dict'], strict=False)
+    
+    print("Encoder unfrozen. Allowing ALM to dynamically balance constraints.")
+    
+    # 2. Start a fresh trainer (We DO NOT pass ckpt_path here!)
+    # Because we injected the weights above, this will start fine-tuning at Epoch 0 
+    # using the golden weights, perfectly initializing the new ALM lambdas at 1.0!
     runner.fit(
         experiment, 
-        datamodule=data, 
-        ckpt_path=resume_path, 
-        weights_only=True
+        datamodule=data
     )
     
 elif resume_path:
