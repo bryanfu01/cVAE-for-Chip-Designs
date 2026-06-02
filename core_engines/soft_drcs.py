@@ -95,9 +95,12 @@ class SoftDRC(nn.Module):
         valid_mask = (macro_powers != -1.0).to(self.device)
         valid_layouts = continuous_layouts[valid_mask]
 
-        # Calculate differences between adjacent pixels (finding the edges)
-        diff_h = torch.abs(valid_layouts[:, 1:, :] - valid_layouts[:, :-1, :])
-        diff_w = torch.abs(valid_layouts[:, :, 1:] - valid_layouts[:, :, :-1])
+        # Pad with 1 pixel of zero on all sides to catch boundary edges!
+        padded_layouts = F.pad(valid_layouts, (1, 1, 1, 1), mode='constant', value=0.0)
+
+        # Calculate differences on the padded layouts
+        diff_h = torch.abs(padded_layouts[:, 1:, :] - padded_layouts[:, :-1, :])
+        diff_w = torch.abs(padded_layouts[:, :, 1:] - padded_layouts[:, :, :-1])
 
         return diff_h.sum(dim=(1, 2)).mean() + diff_w.sum(dim=(1, 2)).mean()
 

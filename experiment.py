@@ -201,7 +201,7 @@ class VAEXperiment(pl.LightningModule):
             raw_area = drc_metrics['Soft_Area_Loss'].detach()
             raw_thermal = drc_metrics['Soft_Thermal_Loss'].detach()
             raw_sharpness_ = drc_metrics['Soft_Sharpness_Loss'].detach()
-            raw_cohesion = drc_metrics['Soft_Area_Loss'].detach()
+            raw_cohesion = drc_metrics['Soft_Cohesion_Loss'].detach()
 
             # 2. Update the Exponential Moving Averages (EMA)
             self.ema_overlap = (self.ema_decay * self.ema_overlap) + ((1 - self.ema_decay) * raw_overlap)
