@@ -17,24 +17,24 @@ exp_params:
 
 soft_drc_params:
   use_soft_drc: True
-  overlap_weight: 50.0
+  overlap_weight: 3000.0
   area_weight: 2000.0
-  thermal_weight: 0.0
+  thermal_weight: 50.0
   target_area: 100.0
   sharpness_weight: 3000.0
   cohesion_weight: 50.0
   vanilla_weight: 3000.0
-  warmup_epochs: 0.0
+  warmup_epochs: 50.0
 
 trainer_params:
   accelerator: "gpu" 
   devices: 1          
   # "/content/drive/MyDrive/ECE_175B_Final_Project/golden_vanilla_weights.ckpt"
   # "/content/checkpoints/ConditionalVAE/version_3/checkpoints/last.ckpt"
-  resume_ckpt_path: "/content/checkpoints/ConditionalVAE/version_0/checkpoints/last.ckpt"
+  resume_ckpt_path: "/content/drive/MyDrive/ECE_175B_Final_Project/golden_vanilla_weights.ckpt"
   limit_train_batches: 0.1
   limit_val_batches: 0.1
-  max_epochs: 120
+  max_epochs: 250
 
 logging_params:
   save_dir: "/content/checkpoints/"

@@ -184,7 +184,7 @@ class VAEXperiment(pl.LightningModule):
                 warmup_factor = min(1.0, self.current_epoch / warmup_epochs)
             else:
                 warmup_factor = 1
-            scaled_drc_loss = drc_metrics['total_drc_loss'] * warmup_factor + (1 - warmup_factor) * drc_metrics['Soft_Sharpness_Loss']
+            scaled_drc_loss = drc_metrics['total_drc_loss'] * warmup_factor
 
             # PROBE 3: Gradient Balance (Prints once per epoch)
             if batch_idx == 0:

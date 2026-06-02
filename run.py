@@ -86,15 +86,7 @@ if resume_path == golden_path:
     print(f"Loading GOLDEN WEIGHTS from: {resume_path}")
     print("Initiating Stage 2 Physics Fine-Tuning (Starting at Epoch 0)...")
     # weights_only=True forces the Trainer to drop the old Adam optimizer and epoch counter
-    for param in experiment.model.encoder.parameters():
-        param.requires_grad = False
-    for param in experiment.model.fc_mu.parameters():
-        param.requires_grad = False
-    for param in experiment.model.fc_logvar.parameters():
-        param.requires_grad = False
-        
-    print("Encoder frozen. Forcing Decoder to maintain latent diversity.")
-    
+
     runner.fit(
         experiment, 
         datamodule=data, 
