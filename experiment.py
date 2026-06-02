@@ -255,13 +255,23 @@ class VAEXperiment(pl.LightningModule):
             self.log('Lambda_Sharpness', self.lambda_sharpness)
             self.log('Lambda_Cohesion', self.lambda_cohesion)
 
+            # 1. Create the differentiable Cohesion Violation tensor
             cohesion_graph_violation = torch.relu(drc_metrics['Soft_Cohesion_Loss'] - dynamic_cohesion_margin)
 
-            total_physics_loss = (self.lambda_overlap * drc_metrics['Soft_Overlap_Loss']) + \
-                                 (self.lambda_area * drc_metrics['Soft_Area_Loss']) + \
-                                 (self.lambda_thermal * drc_metrics['Soft_Thermal_Loss']) + \
-                                 (self.lambda_sharpness * drc_metrics['Soft_Sharpness_Loss']) + \
-                                 (self.lambda_cohesion * cohesion_graph_violation)
+            # 2. EMA LOSS NORMALIZATION
+            # Divide by the EMA to force every constraint's base magnitude to exactly ~1.0
+            norm_overlap = drc_metrics['Soft_Overlap_Loss'] / (self.ema_overlap.detach() + 1e-5)
+            norm_area = drc_metrics['Soft_Area_Loss'] / (self.ema_area.detach() + 1e-5)
+            norm_thermal = drc_metrics['Soft_Thermal_Loss'] / (self.ema_thermal.detach() + 1e-5)
+            norm_sharpness = drc_metrics['Soft_Sharpness_Loss'] / (self.ema_sharpness.detach() + 1e-5)
+            norm_cohesion = cohesion_graph_violation / (self.ema_cohesion.detach() + 1e-5)
+
+            # 3. Apply the ALM Lambda Weights to the Normalized Losses
+            total_physics_loss = (self.lambda_overlap * norm_overlap) + \
+                                 (self.lambda_area * norm_area) + \
+                                 (self.lambda_thermal * norm_thermal) + \
+                                 (self.lambda_sharpness * norm_sharpness) + \
+                                 (self.lambda_cohesion * norm_cohesion)
         
             # PROBE 3: Gradient Balance (Prints once per epoch)
             if batch_idx == 0:
@@ -272,11 +282,11 @@ class VAEXperiment(pl.LightningModule):
                 print(f"Base VAE Loss:    {base_loss:.4f}")
                 print(f"Raw Soft DRC:     {raw_drc:.4f}")
                # ADD .item() TO ALL OF THESE:
-                print(f"Overlap Weight:   {self.lambda_overlap.item():.4f} (Raw: {raw_overlap.item():.4f})")
-                print(f"Area Weight:      {self.lambda_area.item():.4f} (Raw: {raw_area.item():.4f})")
-                print(f"Thermal Weight:   {self.lambda_thermal.item():.4f} (Raw: {raw_thermal.item():.4f})")
-                print(f"Sharpness Weight: {self.lambda_sharpness.item():.4f} (Raw: {raw_sharpness_.item():.4f})")
-                print(f"Cohesion Weight:  {self.lambda_cohesion.item():.4f} (Violation: {cohesion_violation.item():.4f})")
+                print(f"Overlap Weight:   {self.lambda_overlap.item():.4f} (Normalized: {norm_overlap.item():.4f})")
+                print(f"Area Weight:      {self.lambda_area.item():.4f} (Normalized: {norm_area.item():.4f})")
+                print(f"Thermal Weight:   {self.lambda_thermal.item():.4f} (Normalized: {norm_thermal.item():.4f})")
+                print(f"Sharpness Weight: {self.lambda_sharpness.item():.4f} (Normalized: {norm_sharpness.item():.4f})")
+                print(f"Cohesion Weight:  {self.lambda_cohesion.item():.4f} (Normalized: {norm_cohesion.item():.4f})")
                 print(f"Effective DRC:    {total_physics_loss.item():.4f}\n")
 
                 # Mask layout and multiply by heat
@@ -332,13 +342,20 @@ class VAEXperiment(pl.LightningModule):
             dynamic_cohesion_margin = expected_perimeters.mean().item() + 0.5
 
             cohesion_graph_violation = torch.relu(drc_metrics['Soft_Cohesion_Loss'] - dynamic_cohesion_margin)
-            
-           # Calculate validation physics using the currently learned ALM Lambdas!
-            val_physics_loss = (self.lambda_overlap * drc_metrics['Soft_Overlap_Loss']) + \
-                               (self.lambda_area * drc_metrics['Soft_Area_Loss']) + \
-                               (self.lambda_thermal * drc_metrics['Soft_Thermal_Loss']) + \
-                               (self.lambda_sharpness * drc_metrics['Soft_Sharpness_Loss']) + \
-                               (self.lambda_cohesion * cohesion_graph_violation)
+
+            # 2. EMA LOSS NORMALIZATION
+            # Divide by the EMA to force every constraint's base magnitude to exactly ~1.0
+            norm_overlap = drc_metrics['Soft_Overlap_Loss'] / (self.ema_overlap.detach() + 1e-5)
+            norm_area = drc_metrics['Soft_Area_Loss'] / (self.ema_area.detach() + 1e-5)
+            norm_thermal = drc_metrics['Soft_Thermal_Loss'] / (self.ema_thermal.detach() + 1e-5)
+            norm_sharpness = drc_metrics['Soft_Sharpness_Loss'] / (self.ema_sharpness.detach() + 1e-5)
+            norm_cohesion = cohesion_graph_violation / (self.ema_cohesion.detach() + 1e-5)
+
+            val_physics_loss = (self.lambda_overlap * norm_overlap) + \
+                                 (self.lambda_area * norm_area) + \
+                                 (self.lambda_thermal * norm_thermal) + \
+                                 (self.lambda_sharpness * norm_sharpness) + \
+                                 (self.lambda_cohesion * norm_cohesion)
 
             # Add the ALM penalty directly to the total val_loss
             val_loss['loss'] = self.soft_drc_params.get('vanilla_weight', 1) * val_loss['loss'] + val_physics_loss
