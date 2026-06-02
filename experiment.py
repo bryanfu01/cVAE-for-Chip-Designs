@@ -210,6 +210,27 @@ class VAEXperiment(pl.LightningModule):
             self.ema_sharpness = (self.ema_decay * self.ema_sharpness) + ((1 - self.ema_decay) * raw_sharpness_)
             self.ema_cohesion = (self.ema_decay * self.ema_cohesion) + ((1 - self.ema_decay) * raw_cohesion)
 
+            # --- THE FULLY DYNAMIC COHESION MARGIN ---
+            # 'layouts' shape: (Batch, 4, Max_Macros). Index 2 is Height, Index 3 is Width.
+            # 'powers' shape: (Batch, Max_Macros). -1.0 means padded.
+            
+            valid_boolean_mask = (powers != -1.0)
+            
+            # Extract the actual Heights and Widths of only the valid macros
+            true_heights = layouts[:, 2, :][valid_boolean_mask]
+            true_widths = layouts[:, 3, :][valid_boolean_mask]
+            
+            # Theoretical Total Variation (Perimeter) for a solid macro is 2H + 2W
+            expected_perimeters = (2.0 * true_heights) + (2.0 * true_widths)
+            
+            # Because soft_drcs.py averages across all valid macros, our margin is the mean!
+            # We add a tiny 0.5 buffer to account for continuous probability blurring at the edges.
+            dynamic_cohesion_margin = expected_perimeters.mean().item() + 0.5
+            
+            # Calculate the true violation
+            cohesion_violation = raw_cohesion - dynamic_cohesion_margin
+            # -----------------------------------------
+
             # 3. Normalized Dual Ascent Step (Update the Lambdas)
             # Only increase lambda if there is actually a violation!
             if raw_overlap > 0.1:
@@ -220,8 +241,8 @@ class VAEXperiment(pl.LightningModule):
                 self.lambda_thermal.data += self.alm_lr * (raw_thermal / (self.ema_thermal + 1e-5))
             if raw_sharpness_ > 0.1:
                 self.lambda_sharpness.data += self.alm_lr * (raw_sharpness_ / (self.ema_sharpness + 1e-5))
-            if raw_cohesion > 0.1:
-                self.lambda_cohesion.data += self.alm_lr * (raw_cohesion / (self.ema_cohesion + 1e-5))
+            if cohesion_violation > 0.1:
+                self.lambda_cohesion.data += self.alm_lr * (cohesion_violation / (self.ema_cohesion + 1e-5))
 
 
             self.log('Lambda_Overlap', self.lambda_overlap)
@@ -251,7 +272,7 @@ class VAEXperiment(pl.LightningModule):
                 print(f"Area Weight:      {self.lambda_area.item():.4f} (Raw: {raw_area.item():.4f})")
                 print(f"Thermal Weight:   {self.lambda_thermal.item():.4f} (Raw: {raw_thermal.item():.4f})")
                 print(f"Sharpness Weight: {self.lambda_sharpness.item():.4f} (Raw: {raw_sharpness_.item():.4f})")
-                print(f"Cohesion Weight:  {self.lambda_cohesion.item():.4f} (Raw: {raw_cohesion.item():.4f})")
+                print(f"Cohesion Weight:  {self.lambda_cohesion.item():.4f} (Raw: {cohesion_violation.item():.4f})")
                 print(f"Effective DRC:    {total_physics_loss.item():.4f}\n")
 
                 # Mask layout and multiply by heat
