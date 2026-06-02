@@ -17,6 +17,7 @@ exp_params:
 
 soft_drc_params:
   use_soft_drc: True
+  vanilla_weight: 1.0   # <--- THE ANCHOR (Keep this static!)
 
 trainer_params:
   accelerator: "gpu" 

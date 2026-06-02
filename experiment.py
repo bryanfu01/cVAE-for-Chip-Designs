@@ -240,7 +240,7 @@ class VAEXperiment(pl.LightningModule):
         
             # PROBE 3: Gradient Balance (Prints once per epoch)
             if batch_idx == 0:
-                base_loss = self.soft_drc_params.get('vanilla_weight') * train_loss['loss'].item()
+                base_loss = self.soft_drc_params.get('vanilla_weight', 1) * train_loss['loss'].item()
                 raw_drc = drc_metrics['total_drc_loss'].item()
                 raw_sharpness = drc_metrics['Soft_Sharpness_Loss'].item()
                 print(f"=== PROBE 3: EPOCH {self.current_epoch} LOSS BALANCE ===")
@@ -257,7 +257,7 @@ class VAEXperiment(pl.LightningModule):
                 actual_thermal_exposure = (valid_layouts * heat_maps).sum().item()
                 print(f"Total Heat Exposure: {actual_thermal_exposure:.2f} (Should decay over epochs)")
 
-            train_loss['loss'] = self.soft_drc_params.get('vanilla_weight') * train_loss['loss'] + total_physics_loss
+            train_loss['loss'] = self.soft_drc_params.get('vanilla_weight', 1) * train_loss['loss'] + total_physics_loss
             
            # 7. Merge the RAW metrics for TensorBoard tracking
             train_loss.update({k: v.detach() for k, v in drc_metrics.items() if k != 'total_drc_loss'})
@@ -292,7 +292,7 @@ class VAEXperiment(pl.LightningModule):
                                (self.lambda_cohesion * drc_metrics['Soft_Cohesion_Loss'])
 
             # Add the ALM penalty directly to the total val_loss
-            val_loss['loss'] = self.soft_drc_params.get('vanilla_weight', 100.0) * val_loss['loss'] + val_physics_loss
+            val_loss['loss'] = self.soft_drc_params.get('vanilla_weight', 1) * val_loss['loss'] + val_physics_loss
             
             # Merge the raw tracking metrics
             val_loss.update({k: v.detach() for k, v in drc_metrics.items() if k != 'total_drc_loss'})
