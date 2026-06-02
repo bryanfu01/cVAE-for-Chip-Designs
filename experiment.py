@@ -37,6 +37,24 @@ class VAEXperiment(pl.LightningModule):
             cohesion_weight=self.soft_drc_params.get('cohesion_weight', 20.0)
             )
 
+        self.alm_lr = 0.01  # Alpha: How fast the weights are allowed to grow
+        self.ema_decay = 0.99 # Smoothing factor for the moving average
+
+        # Initialize the Trainable Dual Variables (Lambdas)
+        # requires_grad=False because we update them manually, not via Adam
+        self.lambda_overlap = torch.nn.Parameter(torch.tensor(1.0), requires_grad=False)
+        self.lambda_area = torch.nn.Parameter(torch.tensor(1.0), requires_grad=False)
+        self.lambda_sharpness = torch.nn.Parameter(torch.tensor(1.0), requires_grad=False)
+        self.lambda_cohesion = torch.nn.Parameter(torch.tensor(1.0), requires_grad=False)
+        self.lambda_thermal = torch.nn.Parameter(torch.tensor(1.0), requires_grad=False)
+
+        # Register Buffers for the EMAs (so PyTorch handles device placement automatically)
+        self.register_buffer('ema_overlap', torch.tensor(1.0))
+        self.register_buffer('ema_area', torch.tensor(1.0))
+        self.register_buffer('ema_sharpness', torch.tensor(1.0))
+        self.register_buffer('ema_cohesion', torch.tensor(1.0))
+        self.register_buffer('ema_thermal', torch.tensor(1.0))
+
     def forward(self, input: Tensor, condition: Tensor) -> Tensor:
         # Equivalent to self.model.forward(input), but pytorch works better this way for backprop
         return self.model(input, condition)
@@ -178,14 +196,48 @@ class VAEXperiment(pl.LightningModule):
             recons = results[0]
             drc_metrics = self.soft_drc_evaluator(recons, heat_maps, powers)
 
+            # 1. Extract raw constraint violations (Detach them so ALM updates don't flow backward into the VAE)
+            raw_overlap = drc_metrics['Soft_Overlap_Loss'].detach()
+            raw_area = drc_metrics['Soft_Area_Loss'].detach()
+            raw_thermal = drc_metrics['Soft_Thermal_Loss'].detach()
+            raw_sharpness_ = drc_metrics['Soft_Sharpness_Loss'].detach()
+            raw_cohesion = drc_metrics['Soft_Area_Loss'].detach()
+
+            # 2. Update the Exponential Moving Averages (EMA)
+            self.ema_overlap = (self.ema_decay * self.ema_overlap) + ((1 - self.ema_decay) * raw_overlap)
+            self.ema_area = (self.ema_decay * self.ema_area) + ((1 - self.ema_decay) * raw_area)
+            self.ema_thermal = (self.ema_decay * self.ema_thermal) + ((1 - self.ema_decay) * raw_thermal)
+            self.ema_sharpness = (self.ema_decay * self.ema_sharpness) + ((1 - self.ema_decay) * raw_sharpness_)
+            self.ema_cohesion = (self.ema_decay * self.ema_cohesion) + ((1 - self.ema_decay) * raw_cohesion)
+
+            # 3. Normalized Dual Ascent Step (Update the Lambdas)
+            # Only increase lambda if there is actually a violation!
+            if raw_overlap > 0:
+                self.lambda_overlap.data += self.alm_lr * (raw_overlap / (self.ema_overlap + 1e-5))
+            if raw_area > 0:
+                self.lambda_area.data += self.alm_lr * (raw_area / (self.ema_area + 1e-5))
+            if raw_thermal > 0:
+                self.lambda_thermal.data += self.alm_lr * (raw_thermal / (self.ema_thermal + 1e-5))
+            if raw_sharpness_ > 0:
+                self.lambda_sharpness.data += self.alm_lr * (raw_sharpness_ / (self.ema_sharpness + 1e-5))
+            if raw_cohesion > 0:
+                self.lambda_cohesion.data += self.alm_lr * (raw_cohesion / (self.ema_cohesion + 1e-5))
+
+
+            self.log('Lambda_Overlap', self.lambda_overlap)
+            self.log('Lambda_Area', self.lambda_area)
+            self.log('Lambda_Thermal', self.lambda_thermal)
+            self.log('Lambda_Sharpness', self.lambda_sharpness)
+            self.log('Lambda_Cohesion', self.lambda_cohesion)
+
             warmup_epochs = self.soft_drc_params.get('warmup_epochs', 30)
 
-            if warmup_epochs != 0:
-                warmup_factor = min(1.0, self.current_epoch / warmup_epochs)
-            else:
-                warmup_factor = 1
-            scaled_drc_loss = drc_metrics['total_drc_loss'] * warmup_factor
-
+            total_physics_loss = (self.lambda_overlap * drc_metrics['Soft_Overlap_Loss']) + \
+                                 (self.lambda_area * drc_metrics['Soft_Area_Loss']) + \
+                                 (self.lambda_thermal * drc_metrics['Soft_Thermal_Loss']) + \
+                                 (self.lambda_sharpness * drc_metrics['Soft_Sharpness_Loss']) + \
+                                 (self.lambda_cohesion * drc_metrics['Soft_Cohesion_Loss'])
+        
             # PROBE 3: Gradient Balance (Prints once per epoch)
             if batch_idx == 0:
                 base_loss = self.soft_drc_params.get('vanilla_weight') * train_loss['loss'].item()
@@ -194,22 +246,28 @@ class VAEXperiment(pl.LightningModule):
                 print(f"=== PROBE 3: EPOCH {self.current_epoch} LOSS BALANCE ===")
                 print(f"Base VAE Loss:    {base_loss:.4f}")
                 print(f"Raw Soft DRC:     {raw_drc:.4f}")
-                print(f"Warmup Multiplier: {warmup_factor:.4f}")
-                print(f"Effective DRC:    {(raw_drc * warmup_factor + (1 - warmup_factor) * raw_sharpness):.4f}\n")
+                print(f"Overlap Weight: {self.lambda_overlap:.4f}")
+                print(f"Area Weight: {self.lambda_area:.4f}")
+                print(f"Thermal Weight: {self.lambda_thermal:.4f}")
+                print(f"Sharpness Weight: {self.lambda_sharpness:.4f}")
+                print(f"Cohesion Weight: {self.lambda_cohesion:.4f}")
+                print(f"Effective DRC:    {(total_physics_loss):.4f}\n")
 
                 # Mask layout and multiply by heat
                 actual_thermal_exposure = (valid_layouts * heat_maps).sum().item()
                 print(f"Total Heat Exposure: {actual_thermal_exposure:.2f} (Should decay over epochs)")
 
-            train_loss['loss'] = self.soft_drc_params.get('vanilla_weight') * train_loss['loss'] + scaled_drc_loss
+            train_loss['loss'] = self.soft_drc_params.get('vanilla_weight') * train_loss['loss'] + total_physics_loss
             
-            # Merge the isolated metrics for TensorBoard tracking
-            train_loss.update({k: v for k, v in drc_metrics.items() if k != 'total_drc_loss'})
+           # 7. Merge the RAW metrics for TensorBoard tracking
+            train_loss.update({k: v.detach() for k, v in drc_metrics.items() if k != 'total_drc_loss'})
 
-            train_loss['DRC_Warmup_Factor'] = torch.tensor(warmup_factor)
-            train_loss.update({k: (v * warmup_factor) for k, v in drc_metrics.items() if k != 'total_drc_loss'})
+            # 8. Track the EFFECTIVE (Lambda-Scaled) losses
+            train_loss['ALM_Effective_Overlap'] = (self.lambda_overlap * drc_metrics['Soft_Overlap_Loss']).detach()
+            train_loss['ALM_Effective_Area'] = (self.lambda_area * drc_metrics['Soft_Area_Loss']).detach()
+            # ... (add others if you wish to track them)
 
-        self.log_dict({key: val.item() for key, val in train_loss.items()}, sync_dist=True)
+        self.log_dict({key: val.item() if isinstance(val, torch.Tensor) else val for key, val in train_loss.items()}, sync_dist=True)
 
         return train_loss['loss']
 
@@ -226,13 +284,20 @@ class VAEXperiment(pl.LightningModule):
             recons = results[0]
             drc_metrics = self.soft_drc_evaluator(recons, heat_maps, powers)
             
-            # Add the raw physics penalty directly to the total val_loss
-            val_loss['loss'] = self.soft_drc_params.get('vanilla_weight', 100.0) * val_loss['loss'] + drc_metrics['total_drc_loss']
-            
-            # Merge the individual tracking metrics (Overlap, Area, Thermal)
-            val_loss.update({k: v for k, v in drc_metrics.items() if k != 'total_drc_loss'})
+           # Calculate validation physics using the currently learned ALM Lambdas!
+            val_physics_loss = (self.lambda_overlap * drc_metrics['Soft_Overlap_Loss']) + \
+                               (self.lambda_area * drc_metrics['Soft_Area_Loss']) + \
+                               (self.lambda_thermal * drc_metrics['Soft_Thermal_Loss']) + \
+                               (self.lambda_sharpness * drc_metrics['Soft_Sharpness_Loss']) + \
+                               (self.lambda_cohesion * drc_metrics['Soft_Cohesion_Loss'])
 
-        self.log_dict({f"val_{key}": val.item() for key, val in val_loss.items()}, sync_dist=True)
+            # Add the ALM penalty directly to the total val_loss
+            val_loss['loss'] = self.soft_drc_params.get('vanilla_weight', 100.0) * val_loss['loss'] + val_physics_loss
+            
+            # Merge the raw tracking metrics
+            val_loss.update({k: v.detach() for k, v in drc_metrics.items() if k != 'total_drc_loss'})
+
+        self.log_dict({f"val_{key}": val.item() if isinstance(val, torch.Tensor) else val for key, val in val_loss.items()}, sync_dist=True)
         
     def on_validation_end(self) -> None:
         self.sample_images()

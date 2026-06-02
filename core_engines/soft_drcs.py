@@ -123,9 +123,9 @@ class SoftDRC(nn.Module):
         # 4. Return dictionary formatted for TensorBoard logging
         return {
             'total_drc_loss': total_drc_loss,
-            'Soft_Overlap_Loss': weighted_overlap.detach(),
-            'Soft_Area_Loss': weighted_area.detach(),
-            'Soft_Thermal_Loss': weighted_thermal.detach(),
-            'Soft_Sharpness_Loss': weighted_sharpness.detach(),
-            'Soft_Cohesion_Loss': weighted_cohesion.detach()
+            'Soft_Overlap_Loss': weighted_overlap,
+            'Soft_Area_Loss': weighted_area,
+            'Soft_Thermal_Loss': weighted_thermal,
+            'Soft_Sharpness_Loss': weighted_sharpness,
+            'Soft_Cohesion_Loss': weighted_cohesion
         }
