@@ -1,11 +1,11 @@
 saving_params:
   # Swap this path when you want to evaluate different ablation models!
-  img_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Final_Results/Soft_DRC_LSO/Overlap_Only/comparison_test.png"
-  result_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Final_Results/Soft_DRC_LSO/Overlap_Only/eval_metrics_test.txt"
+  img_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Final_Results/Soft_DRC/Overlap_Only/comparison_test.png"
+  result_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Final_Results/Soft_DRC/Overlap_Only/eval_metrics_test.txt"
   save_visualizations: True
   num_comparisons: 25
 
 latent_optim:
-  use_lso: True
+  use_lso: False
   steps: 50
   lr: 0.05
