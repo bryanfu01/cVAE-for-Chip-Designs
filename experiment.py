@@ -251,13 +251,13 @@ class VAEXperiment(pl.LightningModule):
             self.log('Lambda_Sharpness', self.lambda_sharpness)
             self.log('Lambda_Cohesion', self.lambda_cohesion)
 
-            warmup_epochs = self.soft_drc_params.get('warmup_epochs', 30)
+            cohesion_graph_violation = torch.relu(drc_metrics['Soft_Cohesion_Loss'] - dynamic_cohesion_margin)
 
             total_physics_loss = (self.lambda_overlap * drc_metrics['Soft_Overlap_Loss']) + \
                                  (self.lambda_area * drc_metrics['Soft_Area_Loss']) + \
                                  (self.lambda_thermal * drc_metrics['Soft_Thermal_Loss']) + \
                                  (self.lambda_sharpness * drc_metrics['Soft_Sharpness_Loss']) + \
-                                 (self.lambda_cohesion * drc_metrics['Soft_Cohesion_Loss'])
+                                 (self.lambda_cohesion * cohesion_graph_violation)
         
             # PROBE 3: Gradient Balance (Prints once per epoch)
             if batch_idx == 0:
@@ -272,7 +272,7 @@ class VAEXperiment(pl.LightningModule):
                 print(f"Area Weight:      {self.lambda_area.item():.4f} (Raw: {raw_area.item():.4f})")
                 print(f"Thermal Weight:   {self.lambda_thermal.item():.4f} (Raw: {raw_thermal.item():.4f})")
                 print(f"Sharpness Weight: {self.lambda_sharpness.item():.4f} (Raw: {raw_sharpness_.item():.4f})")
-                print(f"Cohesion Weight:  {self.lambda_cohesion.item():.4f} (Raw: {cohesion_violation.item():.4f})")
+                print(f"Cohesion Weight:  {self.lambda_cohesion.item():.4f} (Violation: {cohesion_violation.item():.4f})")
                 print(f"Effective DRC:    {total_physics_loss.item():.4f}\n")
 
                 # Mask layout and multiply by heat
@@ -305,13 +305,32 @@ class VAEXperiment(pl.LightningModule):
         if self.soft_drc_params.get('use_soft_drc', False):
             recons = results[0]
             drc_metrics = self.soft_drc_evaluator(recons, heat_maps, powers)
+
+            # --- THE FULLY DYNAMIC COHESION MARGIN ---
+            # 'layouts' shape: (Batch, 4, Max_Macros). Index 2 is Height, Index 3 is Width.
+            # 'powers' shape: (Batch, Max_Macros). -1.0 means padded.
+            
+            valid_boolean_mask = (powers != -1.0)
+            
+            # Extract the actual Heights and Widths of only the valid macros
+            true_heights = layouts[:, 2, :][valid_boolean_mask]
+            true_widths = layouts[:, 3, :][valid_boolean_mask]
+            
+            # Theoretical Total Variation (Perimeter) for a solid macro is 2H + 2W
+            expected_perimeters = (2.0 * true_heights) + (2.0 * true_widths)
+            
+            # Because soft_drcs.py averages across all valid macros, our margin is the mean!
+            # We add a tiny 0.5 buffer to account for continuous probability blurring at the edges.
+            dynamic_cohesion_margin = expected_perimeters.mean().item() + 0.5
+
+            cohesion_graph_violation = torch.relu(drc_metrics['Soft_Cohesion_Loss'] - dynamic_cohesion_margin)
             
            # Calculate validation physics using the currently learned ALM Lambdas!
             val_physics_loss = (self.lambda_overlap * drc_metrics['Soft_Overlap_Loss']) + \
                                (self.lambda_area * drc_metrics['Soft_Area_Loss']) + \
                                (self.lambda_thermal * drc_metrics['Soft_Thermal_Loss']) + \
                                (self.lambda_sharpness * drc_metrics['Soft_Sharpness_Loss']) + \
-                               (self.lambda_cohesion * drc_metrics['Soft_Cohesion_Loss'])
+                               (self.lambda_cohesion * cohesion_graph_violation)
 
             # Add the ALM penalty directly to the total val_loss
             val_loss['loss'] = self.soft_drc_params.get('vanilla_weight', 1) * val_loss['loss'] + val_physics_loss
