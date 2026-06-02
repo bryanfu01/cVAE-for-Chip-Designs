@@ -27,7 +27,7 @@ trainer_params:
   resume_ckpt_path: "/content/drive/MyDrive/ECE_175B_Final_Project/golden_vanilla_weights.ckpt"
   limit_train_batches: 0.1
   limit_val_batches: 0.1
-  max_epochs: 250
+  max_epochs: 50
 
 logging_params:
   save_dir: "/content/checkpoints/"
