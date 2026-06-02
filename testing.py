@@ -1,39 +1,50 @@
 import torch
 import torch.nn.functional as F
 
-def test_soft_overlap_penalty():
-    print("--- Isolating Soft Overlap Penalty ---")
-    # Simulate: 1 Chip, 2 Macros, 64x64 Grid
+def test_cohesion_alignment():
+    # 1. Setup Mock Grid and Tensors [Batch, Channels, Height, Width]
     B, C, H, W = 1, 2, 64, 64
-    continuous_layouts = torch.zeros(B, C, H, W)
-    macro_powers = torch.tensor([[0.5, 0.5]]) # Both valid
+    layouts = torch.zeros((B, C, H, W))
+    powers = torch.tensor([[10.0, 20.0]]) # Both channels are valid
 
-    # Draw Macro 1: 10x10 solid box at coordinates (20, 20)
-    continuous_layouts[0, 0, 20:30, 20:30] = 1.0 
+    # 2. Draw perfectly isolated, solid binary macros
+    # Macro 0: 10x10 block (Area = 100, Expected Perimeter = 40)
+    layouts[0, 0, 5:15, 5:15] = 1.0 
     
-    # Draw Macro 2: 10x10 solid box at coordinates (25, 25)
-    # This creates exactly a 5x5 overlapping intersection (25 pixels)
-    continuous_layouts[0, 1, 25:35, 25:35] = 1.0 
-
-    # --- Soft DRC Overlap Math (From your core_engines) ---
-    # 1. Mask out padded channels (Multiplication method, NOT boolean index!)
-    valid_mask = (macro_powers != -1.0).view(B, C, 1, 1).float()
-    valid_layouts = continuous_layouts * valid_mask
-
-    # 2. Sum the channels together
-    # Where they overlap, 1.0 + 1.0 = 2.0
-    summed_layouts = valid_layouts.sum(dim=1) 
-
-    # 3. Apply ReLU(sum - 1.0) to isolate only the overlaps
-    # 2.0 - 1.0 = 1.0 penalty. 1.0 - 1.0 = 0.0 penalty.
-    overlap_violations = F.relu(summed_layouts - 1.0)
-    total_overlap_loss = overlap_violations.sum()
-
-    print(f"Expected Overlap:   25.00 pixels")
-    print(f"Calculated Penalty: {total_overlap_loss.item():.2f} pixels")
+    # Macro 1: 5x20 block (Area = 100, Expected Perimeter = 50)
+    layouts[0, 1, 20:25, 10:30] = 1.0 
     
-    if total_overlap_loss.item() == 25.0:
-        print("Verdict: OVERLAP PENALTY IS MATHEMATICALLY FLAWLESS.")
+    # --- 3. Run SoftDRC TV Calculation (From soft_drcs.py) ---
+    valid_mask = (powers != -1.0)
+    valid_layouts = layouts[valid_mask]
+    
+    padded_layouts = F.pad(valid_layouts, (1, 1, 1, 1), mode='constant', value=0.0)
+    diff_h = torch.abs(padded_layouts[:, 1:, :] - padded_layouts[:, :-1, :])
+    diff_w = torch.abs(padded_layouts[:, :, 1:] - padded_layouts[:, :, :-1])
+    
+    tv_penalty = diff_h.sum(dim=(1, 2)).mean() + diff_w.sum(dim=(1, 2)).mean()
+    
+    # --- 4. Run Dynamic Slack Math (From experiment.py) ---
+    macro_heights = layouts.max(dim=3)[0].sum(dim=2)
+    macro_widths = layouts.max(dim=2)[0].sum(dim=2)
+    
+    valid_heights = macro_heights[valid_mask]
+    valid_widths = macro_widths[valid_mask]
+    
+    expected_perimeters = (2.0 * valid_heights) + (2.0 * valid_widths)
+    slack_value = expected_perimeters.mean()
+    
+    # --- 5. Print and Assert ---
+    print(f"--- Cohesion Alignment Test ---")
+    print(f"Macro 0 Expected Perimeter: {2*(10) + 2*(10)}")
+    print(f"Macro 1 Expected Perimeter: {2*(5) + 2*(20)}")
+    print(f"Batch Average Perimeter:    {(40 + 50) / 2}")
+    print(f"-------------------------------")
+    print(f"Calculated TV Penalty:      {tv_penalty.item()}")
+    print(f"Calculated Slack Margin:    {slack_value.item()}")
+    
+    assert torch.isclose(tv_penalty, slack_value), "Mismatch detected!"
+    print("\nSuccess! The Cohesion Penalty and Dynamic Slack are PERFECTLY aligned.")
 
-if __name__ == '__main__':
-    test_soft_overlap_penalty()
+if __name__ == "__main__":
+    test_cohesion_alignment()
