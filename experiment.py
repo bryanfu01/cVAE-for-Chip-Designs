@@ -212,15 +212,15 @@ class VAEXperiment(pl.LightningModule):
 
             # 3. Normalized Dual Ascent Step (Update the Lambdas)
             # Only increase lambda if there is actually a violation!
-            if raw_overlap > 0:
+            if raw_overlap > 0.1:
                 self.lambda_overlap.data += self.alm_lr * (raw_overlap / (self.ema_overlap + 1e-5))
-            if raw_area > 0:
+            if raw_area > 0.1:
                 self.lambda_area.data += self.alm_lr * (raw_area / (self.ema_area + 1e-5))
-            if raw_thermal > 0:
+            if raw_thermal > 0.1:
                 self.lambda_thermal.data += self.alm_lr * (raw_thermal / (self.ema_thermal + 1e-5))
-            if raw_sharpness_ > 0:
+            if raw_sharpness_ > 0.1:
                 self.lambda_sharpness.data += self.alm_lr * (raw_sharpness_ / (self.ema_sharpness + 1e-5))
-            if raw_cohesion > 0:
+            if raw_cohesion > 0.1:
                 self.lambda_cohesion.data += self.alm_lr * (raw_cohesion / (self.ema_cohesion + 1e-5))
 
 
@@ -247,11 +247,11 @@ class VAEXperiment(pl.LightningModule):
                 print(f"Base VAE Loss:    {base_loss:.4f}")
                 print(f"Raw Soft DRC:     {raw_drc:.4f}")
                # ADD .item() TO ALL OF THESE:
-                print(f"Overlap Weight:   {self.lambda_overlap.item():.4f}")
-                print(f"Area Weight:      {self.lambda_area.item():.4f}")
-                print(f"Thermal Weight:   {self.lambda_thermal.item():.4f}")
-                print(f"Sharpness Weight: {self.lambda_sharpness.item():.4f}")
-                print(f"Cohesion Weight:  {self.lambda_cohesion.item():.4f}")
+                print(f"Overlap Weight:   {self.lambda_overlap.item():.4f} (Raw: {raw_overlap.item():.4f})")
+                print(f"Area Weight:      {self.lambda_area.item():.4f} (Raw: {raw_area.item():.4f})")
+                print(f"Thermal Weight:   {self.lambda_thermal.item():.4f} (Raw: {raw_thermal.item():.4f})")
+                print(f"Sharpness Weight: {self.lambda_sharpness.item():.4f} (Raw: {raw_sharpness_.item():.4f})")
+                print(f"Cohesion Weight:  {self.lambda_cohesion.item():.4f} (Raw: {raw_cohesion.item():.4f})")
                 print(f"Effective DRC:    {total_physics_loss.item():.4f}\n")
 
                 # Mask layout and multiply by heat
