@@ -9,6 +9,7 @@ import torch.backends.cudnn as cudnn
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
+from callback import DriveSyncCallback
 
 # Local Project Imports
 from models import *
@@ -61,13 +62,26 @@ data.setup()
 
 resume_path = config['trainer_params'].pop('resume_ckpt_path', None)
 # Trainer initialized without the deprecated DDPPlugin
+# 1. Standard checkpointing (Saves extremely fast to local Colab disk)
+checkpoint_callback = ModelCheckpoint(
+    dirpath=os.path.join(tb_logger.log_dir , "checkpoints"),
+    save_top_k=2,
+    monitor="val_loss",
+    save_last=True, 
+)
+
+# 2. Our custom safe-sync to Google Drive (Every 10 epochs)
+drive_sync = DriveSyncCallback(
+    drive_dir="/content/drive/MyDrive/ECE_175B_Final_Project/Vanilla_CVAE_Checkpoints/",
+    sync_every_n_epochs=10
+)
+
+# 3. Add to Trainer
 runner = Trainer(logger=tb_logger,
                  callbacks=[
                      LearningRateMonitor(),
-                     ModelCheckpoint(save_top_k=2, 
-                                     dirpath=os.path.join(tb_logger.log_dir , "checkpoints"), 
-                                     monitor="val_loss",
-                                     save_last=True),
+                     checkpoint_callback,
+                     drive_sync
                  ],
                  **config['trainer_params'])
 
