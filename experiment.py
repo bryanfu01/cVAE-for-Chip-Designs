@@ -194,7 +194,7 @@ class VAEXperiment(pl.LightningModule):
         
         if self.soft_drc_params.get('use_soft_drc', False):
             recons = results[0]
-            drc_metrics = self.soft_drc_evaluator(recons, heat_maps, powers)
+            drc_metrics = self.soft_drc_evaluator(recons, heat_maps, powers, true_layouts=layouts)
 
             # 1. Extract raw constraint violations (Detach them so ALM updates don't flow backward into the VAE)
             raw_overlap = drc_metrics['Soft_Overlap_Loss'].detach()
@@ -308,7 +308,7 @@ class VAEXperiment(pl.LightningModule):
         
         if self.soft_drc_params.get('use_soft_drc', False):
             recons = results[0]
-            drc_metrics = self.soft_drc_evaluator(recons, heat_maps, powers)
+            drc_metrics = self.soft_drc_evaluator(recons, heat_maps, powers, true_layouts=layouts)
 
             # --- THE FULLY DYNAMIC COHESION MARGIN ---
             # 'layouts' shape: (Batch, 4, Max_Macros). Index 2 is Height, Index 3 is Width.

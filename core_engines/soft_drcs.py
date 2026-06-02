@@ -36,16 +36,22 @@ class SoftDRC(nn.Module):
         density_sum = valid_layouts.sum(dim=1) 
         overlap_error = F.relu(density_sum - 1.0)
         
-        return (overlap_error ** 2).mean()
+        return (overlap_error ** 2).sum(dim=(1, 2)).mean()
 
-    def _calculate_area_penalty(self, continuous_layouts: torch.Tensor, macro_powers: torch.Tensor) -> torch.Tensor:
+    def _calculate_area_penalty(self, continuous_layouts: torch.Tensor, macro_powers: torch.Tensor, true_layouts: torch.Tensor = None) -> torch.Tensor:
         B, C, H, W = continuous_layouts.shape
 
         valid_mask = (macro_powers != -1.0).to(self.device)
         continuous_layouts = continuous_layouts.to(self.device)
         valid_layouts = continuous_layouts[valid_mask]
 
-        macro_masses = valid_layouts.sum(dim=(1, 2)) 
+        macro_masses = valid_layouts.sum(dim=(1, 2))
+
+        if true_layouts is not None:
+            valid_true = true_layouts.to(self.device)[valid_mask]
+            target_areas = valid_true.sum(dim=(1, 2)).detach() # True Ground Truth Area
+        else:
+            target_areas = torch.full_like(macro_masses, self.target_area)
         
         target_areas = torch.full_like(macro_masses, self.target_area)
         
@@ -75,7 +81,7 @@ class SoftDRC(nn.Module):
         # High-power macros in cold spots will generate massive gradient penalties!
         thermal_penalty = (continuous_layouts.to(self.device) * power_weights.to(self.device)) * inverse_heatmaps.to(self.device)
         
-        return thermal_penalty.mean()
+        return thermal_penalty.sum(dim=(1, 2, 3)).mean()
     
     def _calculate_sharpness_penalty(self, continuous_layouts: torch.Tensor, macro_powers: torch.Tensor) -> torch.Tensor:
         B, C, H, W = continuous_layouts.shape
