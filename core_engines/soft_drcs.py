@@ -110,11 +110,11 @@ class SoftDRC(nn.Module):
 
         return diff_h.sum(dim=(1, 2)).mean() + diff_w.sum(dim=(1, 2)).mean()
 
-    def forward(self, continuous_layouts: torch.Tensor, target_heatmaps: torch.Tensor, macro_powers: torch.Tensor) -> dict:
+    def forward(self, continuous_layouts: torch.Tensor, target_heatmaps: torch.Tensor, macro_powers: torch.Tensor, true_layouts: torch.Tensor = None) -> dict:
         
         # Make sure to pass macro_powers to ALL THREE functions now!
         overlap_loss = self._calculate_overlap_penalty(continuous_layouts, macro_powers.to(self.device))
-        area_loss = self._calculate_area_penalty(continuous_layouts, macro_powers.to(self.device))
+        area_loss = self._calculate_area_penalty(continuous_layouts, macro_powers.to(self.device), true_layouts=true_layouts)
         thermal_loss = self._calculate_thermal_penalty(continuous_layouts, target_heatmaps, macro_powers.to(self.device))
         sharpness_loss = self._calculate_sharpness_penalty(continuous_layouts, macro_powers.to(self.device))
         cohesion_loss = self._calculate_cohesion_penalty(continuous_layouts, macro_powers.to(self.device))
