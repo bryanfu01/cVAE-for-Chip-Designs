@@ -18,6 +18,14 @@ exp_params:
 soft_drc_params:
   use_soft_drc: True
   vanilla_weight: 1.0   # <--- THE ANCHOR (Keep this static!)
+  # The Physics Base Weights (Set to 1.0, let ALM do the scaling!)
+  overlap_weight: 1.0
+  area_weight: 1.0
+  thermal_weight: 1.0
+  sharpness_weight: 1.0
+  cohesion_weight: 1.0
+  
+  target_area: 100.0  # (Keep this, it's a physical dimension, not a weight)
 
 trainer_params:
   accelerator: "gpu" 
