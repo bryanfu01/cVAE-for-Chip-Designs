@@ -216,12 +216,16 @@ class VAEXperiment(pl.LightningModule):
             
             valid_boolean_mask = (powers != -1.0)
             
-            # Extract the actual Heights and Widths of only the valid macros
-            true_heights = layouts[:, 2, :][valid_boolean_mask]
-            true_widths = layouts[:, 3, :][valid_boolean_mask]
+           # Extract the actual Heights and Widths of only the valid macros
+            macro_heights = layouts.max(dim=3)[0].sum(dim=2)  # Shape: [B, C]
+            macro_widths = layouts.max(dim=2)[0].sum(dim=2)   # Shape: [B, C]
+
+            # 2. Filter out the padded channels using the mask
+            valid_heights = macro_heights[valid_boolean_mask]
+            valid_widths = macro_widths[valid_boolean_mask]
             
             # Theoretical Total Variation (Perimeter) for a solid macro is 2H + 2W
-            expected_perimeters = (2.0 * true_heights) + (2.0 * true_widths)
+            expected_perimeters = (2.0 * valid_heights) + (2.0 * valid_widths)
             
             # Because soft_drcs.py averages across all valid macros, our margin is the mean!
             # We add a tiny 0.5 buffer to account for continuous probability blurring at the edges.
@@ -313,11 +317,15 @@ class VAEXperiment(pl.LightningModule):
             valid_boolean_mask = (powers != -1.0)
             
             # Extract the actual Heights and Widths of only the valid macros
-            true_heights = layouts[:, 2, :][valid_boolean_mask]
-            true_widths = layouts[:, 3, :][valid_boolean_mask]
+            macro_heights = layouts.max(dim=3)[0].sum(dim=2)  # Shape: [B, C]
+            macro_widths = layouts.max(dim=2)[0].sum(dim=2)   # Shape: [B, C]
+
+            # 2. Filter out the padded channels using the mask
+            valid_heights = macro_heights[valid_boolean_mask]
+            valid_widths = macro_widths[valid_boolean_mask]
             
             # Theoretical Total Variation (Perimeter) for a solid macro is 2H + 2W
-            expected_perimeters = (2.0 * true_heights) + (2.0 * true_widths)
+            expected_perimeters = (2.0 * valid_heights) + (2.0 * valid_widths)
             
             # Because soft_drcs.py averages across all valid macros, our margin is the mean!
             # We add a tiny 0.5 buffer to account for continuous probability blurring at the edges.
