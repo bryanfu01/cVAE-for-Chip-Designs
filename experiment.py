@@ -248,6 +248,16 @@ class VAEXperiment(pl.LightningModule):
             if cohesion_violation > 0.1:
                 self.lambda_cohesion.data += self.alm_lr * (cohesion_violation / (self.ema_cohesion + 1e-5))
 
+            # 2. BOUNDED ALM (The Lambda Cap)
+            # Prevent the physics engine from going thermonuclear and destroying the VAE!
+            lambda_cap = 3.0  # (You can expose this to cvae.yaml if you want)
+            
+            self.lambda_overlap.data = torch.clamp(self.lambda_overlap.data, min=0.0, max=lambda_cap)
+            self.lambda_area.data = torch.clamp(self.lambda_area.data, min=0.0, max=lambda_cap)
+            self.lambda_thermal.data = torch.clamp(self.lambda_thermal.data, min=0.0, max=lambda_cap)
+            self.lambda_sharpness.data = torch.clamp(self.lambda_sharpness.data, min=0.0, max=lambda_cap)
+            self.lambda_cohesion.data = torch.clamp(self.lambda_cohesion.data, min=0.0, max=lambda_cap)
+
 
             self.log('Lambda_Overlap', self.lambda_overlap)
             self.log('Lambda_Area', self.lambda_area)

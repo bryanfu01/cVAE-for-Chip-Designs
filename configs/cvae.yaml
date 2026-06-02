@@ -17,7 +17,7 @@ exp_params:
 
 soft_drc_params:
   use_soft_drc: True
-  vanilla_weight: 1.0   # <--- THE ANCHOR (Keep this static!)
+  vanilla_weight: 10.0   # <--- THE ANCHOR (Keep this static!)
   # The Physics Base Weights (Set to 1.0, let ALM do the scaling!)
   overlap_weight: 1.0
   area_weight: 1.0
