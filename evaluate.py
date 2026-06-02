@@ -43,6 +43,20 @@ def main():
     experiment.eval()
     experiment.to(device)
 
+    print("\n--- Extracted ALM Weights from Checkpoint ---")
+    lam_overlap = experiment.lambda_overlap.item()
+    lam_area = experiment.lambda_area.item()
+    lam_thermal = experiment.lambda_thermal.item()
+    lam_sharpness = experiment.lambda_sharpness.item()
+    lam_cohesion = experiment.lambda_cohesion.item()
+    
+    print(f"Lambda Overlap:   {lam_overlap:.4f}")
+    print(f"Lambda Area:      {lam_area:.4f}")
+    print(f"Lambda Thermal:   {lam_thermal:.4f}")
+    print(f"Lambda Sharpness: {lam_sharpness:.4f}")
+    print(f"Lambda Cohesion:  {lam_cohesion:.4f}")
+    print("---------------------------------------------\n")
+
     data = VAEDataset(**config["data_params"])
     data.setup()
     test_loader = data.test_dataloader()
@@ -57,13 +71,15 @@ def main():
                                            tolerance=data_config['finite_solver_params']['tolerance'],
                                            iterations=data_config['finite_solver_params']['iterations'])
     
+    # --- NEW: Initialize SoftDRC with EFFECTIVE ALM Weights ---
+    # Effective Weight = (Base YAML Weight) * (Learned ALM Lambda)
     drc_evaluator = SoftDRC(
-        overlap_weight=config['soft_drc_params']['overlap_weight'], 
-        area_weight=config['soft_drc_params']['area_weight'], 
-        thermal_weight=config['soft_drc_params']['thermal_weight'],
-        sharpness_weight=config['soft_drc_params']['sharpness_weight'],
+        overlap_weight=config['soft_drc_params']['overlap_weight'] * lam_overlap, 
+        area_weight=config['soft_drc_params']['area_weight'] * lam_area, 
+        thermal_weight=config['soft_drc_params']['thermal_weight'] * lam_thermal,
+        sharpness_weight=config['soft_drc_params']['sharpness_weight'] * lam_sharpness,
         target_area=config['soft_drc_params']['target_area'],
-        cohesion_weight=config['soft_drc_params']['cohesion_weight']
+        cohesion_weight=config['soft_drc_params']['cohesion_weight'] * lam_cohesion
     )
     
     print("Beginning evaluation...")
