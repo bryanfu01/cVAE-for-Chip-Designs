@@ -246,12 +246,13 @@ class VAEXperiment(pl.LightningModule):
                 print(f"=== PROBE 3: EPOCH {self.current_epoch} LOSS BALANCE ===")
                 print(f"Base VAE Loss:    {base_loss:.4f}")
                 print(f"Raw Soft DRC:     {raw_drc:.4f}")
-                print(f"Overlap Weight: {self.lambda_overlap:.4f}")
-                print(f"Area Weight: {self.lambda_area:.4f}")
-                print(f"Thermal Weight: {self.lambda_thermal:.4f}")
-                print(f"Sharpness Weight: {self.lambda_sharpness:.4f}")
-                print(f"Cohesion Weight: {self.lambda_cohesion:.4f}")
-                print(f"Effective DRC:    {(total_physics_loss):.4f}\n")
+               # ADD .item() TO ALL OF THESE:
+                print(f"Overlap Weight:   {self.lambda_overlap.item():.4f}")
+                print(f"Area Weight:      {self.lambda_area.item():.4f}")
+                print(f"Thermal Weight:   {self.lambda_thermal.item():.4f}")
+                print(f"Sharpness Weight: {self.lambda_sharpness.item():.4f}")
+                print(f"Cohesion Weight:  {self.lambda_cohesion.item():.4f}")
+                print(f"Effective DRC:    {total_physics_loss.item():.4f}\n")
 
                 # Mask layout and multiply by heat
                 actual_thermal_exposure = (valid_layouts * heat_maps).sum().item()
