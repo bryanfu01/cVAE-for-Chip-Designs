@@ -16,7 +16,7 @@ exp_params:
   manual_seed: 42
 
 soft_drc_params:
-  use_soft_drc: True
+  use_soft_drc: False
   vanilla_weight: 5000.0  # <--- THE ANCHOR (Keep this static!)
   # The Physics Base Weights (Set to 1.0, let ALM do the scaling!)
   overlap_weight: 1.0
@@ -32,7 +32,7 @@ trainer_params:
   devices: 1          
   # "/content/drive/MyDrive/ECE_175B_Final_Project/golden_vanilla_weights.ckpt"
   # "/content/checkpoints/ConditionalVAE/version_3/checkpoints/last.ckpt"
-  resume_ckpt_path: "/content/checkpoints/ConditionalVAE/version_0/checkpoints/last.ckpt"
+  resume_ckpt_path: "/content/drive/MyDrive/ECE_175B_Final_Project/golden_vanilla_weights.ckpt"
   limit_train_batches: 1.0
   limit_val_batches: 1.0
   max_epochs: 25
