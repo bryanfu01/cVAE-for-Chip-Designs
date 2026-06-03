@@ -1,7 +1,7 @@
 saving_params:
   # Swap this path when you want to evaluate different ablation models!
-  img_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Final_Results/Soft_DRC/comparison_test.png"
-  result_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Final_Results/Soft_DRC/eval_metrics_test.txt"
+  img_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Final_Results/Extended_Vanilla/comparison_test.png"
+  result_path: "/content/drive/MyDrive/ECE_175B_Final_Project/Final_Results/Extended_Vanilla/eval_metrics_test.txt"
   save_visualizations: True
   num_comparisons: 25
 
