@@ -86,6 +86,6 @@ def extract_and_plot_tb_logs(log_dir, save_path="/content/drive/MyDrive/ECE_175B
 
 if __name__ == "__main__":
     # CHANGE THIS to the folder containing your vanilla run's events.out.tfevents file
-    SOFT_DRC_LOG_DIR = "/content/checkpoints/ConditionalVAE/version_0/events.out.tfevents.1780351797.05ddb3851851.26722.0"
+    SOFT_DRC_LOG_DIR = "/content/checkpoints/ConditionalVAE/version_0/events.out.tfevents.1780450879.4a6c37461540.12292.0"
     
     extract_and_plot_tb_logs(SOFT_DRC_LOG_DIR)
