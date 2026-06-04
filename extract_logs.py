@@ -1,5 +1,6 @@
 import os
 import math
+import pandas as pd
 import matplotlib.pyplot as plt
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
@@ -66,6 +67,11 @@ def extract_and_plot_tb_logs(log_dir, save_path="/content/drive/MyDrive/ECE_175B
         if 'Reconstruction' in metric_name: color = 'green'
         elif 'KLD' in metric_name: color = 'purple'
         elif any(p in metric_name for p in physics_metrics): color = 'tomato'
+
+        window_size = 5 # Adjust this to make it smoother
+        smoothed_values = pd.Series(data['values']).rolling(window=window_size, min_periods=1).mean()
+
+        ax.plot(data['epochs'], smoothed_values, color=color, linewidth=2)
             
         ax.plot(data['epochs'], data['values'], color=color, linewidth=2)
         
