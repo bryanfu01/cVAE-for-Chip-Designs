@@ -62,16 +62,21 @@ def extract_and_plot_tb_logs(log_dir, save_path="/content/drive/MyDrive/ECE_175B
     for i, (metric_name, data) in enumerate(history.items()):
         ax = axes[i]
         
-        # Color coding: Green for Recon, Purple for KLD, Red/Orange for Physics
+        # Color coding
         color = 'blue'
         if 'Reconstruction' in metric_name: color = 'green'
         elif 'KLD' in metric_name: color = 'purple'
         elif any(p in metric_name for p in physics_metrics): color = 'tomato'
-
-        window_size = 5 # Adjust this to make it smoother
-        smoothed_values = pd.Series(data['values']).rolling(window=window_size, min_periods=1).mean()
-
-        ax.plot(data['epochs'], smoothed_values, color=color, linewidth=2)
+        
+        # --- THE FIX: Aggregate by Epoch ---
+        # 1. Load into a DataFrame
+        df = pd.DataFrame({'epoch': data['epochs'], 'value': data['values']})
+        
+        # 2. Group by the exact integer epoch and take the mean
+        df_epoch = df.groupby('epoch').mean().reset_index()
+        
+        # 3. Plot the aggregated data (Exactly 1 point per epoch!)
+        ax.plot(df_epoch['epoch'], df_epoch['value'], color=color, linewidth=2)
         
         # Formatting
         ax.set_title(metric_name.replace('train/', '').replace('val/', ''), fontsize=12, fontweight='bold')
