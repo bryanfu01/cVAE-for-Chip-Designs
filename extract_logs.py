@@ -72,8 +72,6 @@ def extract_and_plot_tb_logs(log_dir, save_path="/content/drive/MyDrive/ECE_175B
         smoothed_values = pd.Series(data['values']).rolling(window=window_size, min_periods=1).mean()
 
         ax.plot(data['epochs'], smoothed_values, color=color, linewidth=2)
-            
-        ax.plot(data['epochs'], data['values'], color=color, linewidth=2)
         
         # Formatting
         ax.set_title(metric_name.replace('train/', '').replace('val/', ''), fontsize=12, fontweight='bold')
