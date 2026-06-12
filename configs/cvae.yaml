@@ -32,7 +32,7 @@ trainer_params:
   devices: 1          
   # "/content/drive/MyDrive/ECE_175B_Final_Project/golden_vanilla_weights.ckpt"
   # "/content/checkpoints/ConditionalVAE/version_3/checkpoints/last.ckpt"
-  resume_ckpt_path: "/content/checkpoints/ConditionalVAE/version_0/checkpoints/last.ckpt"
+  resume_ckpt_path: "/content/drive/MyDrive/ECE_175B_Final_Project/golden_soft_drc.ckpt"
   limit_train_batches: 1.0
   limit_val_batches: 1.0
   max_epochs: 25
