@@ -43,7 +43,7 @@ def main():
     experiment.eval()
     experiment.to(device)
 
-    print("\n--- Extracted ALM Weights from Checkpoint ---")
+    print("\n--- Extracted BDA Weights from Checkpoint ---")
     lam_overlap = experiment.lambda_overlap.item()
     lam_area = experiment.lambda_area.item()
     lam_thermal = experiment.lambda_thermal.item()
@@ -71,8 +71,8 @@ def main():
                                            tolerance=data_config['finite_solver_params']['tolerance'],
                                            iterations=data_config['finite_solver_params']['iterations'])
     
-    # --- NEW: Initialize SoftDRC with EFFECTIVE ALM Weights ---
-    # Effective Weight = (Base YAML Weight) * (Learned ALM Lambda)
+    # --- NEW: Initialize SoftDRC with EFFECTIVE BDA Weights ---
+    # Effective Weight = (Base YAML Weight) * (Learned BDA Lambda)
     drc_evaluator = SoftDRC(
         overlap_weight=config['soft_drc_params']['overlap_weight'] * lam_overlap, 
         area_weight=config['soft_drc_params']['area_weight'] * lam_area, 
@@ -117,7 +117,8 @@ def main():
                 lso_steps=lso_steps, 
                 lr=lso_lr,
                 drc_evaluator=drc_evaluator,
-                regulariztion=config["exp_params"]["kld_weight"]
+                regulariztion=config["exp_params"]["kld_weight"],
+                batch_idx=batch_idx
             )
         # C. Discretization & Metrics (Freeze gradients to save RAM!)
         with torch.no_grad():

@@ -1,7 +1,7 @@
 import torch
 from core_engines.soft_drcs import SoftDRC
 
-def optimize_latent_space(model, condition, z, ground_truth_powers=None, lso_steps=50, lr=0.05, drc_evaluator=None, regulariztion=0.00025):
+def optimize_latent_space(model, condition, z, ground_truth_powers=None, lso_steps=50, lr=0.05, drc_evaluator=None, regulariztion=0.00025, batch_idx=None):
     """
     Refines the latent vector z using gradients from the unified SoftDRC physics penalties.
     """
@@ -29,14 +29,19 @@ def optimize_latent_space(model, condition, z, ground_truth_powers=None, lso_ste
         # --- UNIFIED DIFFERENTIABLE PHYSICS ---
         # Call the exact same SoftDRC module used in experiment.py!
         drc_metrics = drc_evaluator(continuous_layouts, condition, ground_truth_powers)
-        physics_penalty = drc_metrics['total_drc_loss']
+        drc_penalty = drc_metrics['total_drc_loss']
+        
         
         # NEW: Calculate Latent Regularization (Anchor z to standard normal)
         # We multiply by your exact kld_weight from the yaml!
         z_penalty =  regulariztion * 0.5 * torch.sum(z ** 2)
-        total_penalty = physics_penalty + z_penalty
+        total_penalty = drc_penalty + z_penalty
         # Backpropagate to z
         total_penalty.backward()
+
+        if batch_idx == 0 and step % 10 == 0:
+            print(f"LSO Step {step:02d} | Physics Penalty: {drc_penalty.item():.4f} | "
+                  f"Z-Reg Penalty: {z_penalty.item():.4f} | Z-StdDev: {z.std().item():.4f}")
 
         # PROBE 4: Gradient Flow Check (Only on the first step of the first batch)
         if step == 0:
