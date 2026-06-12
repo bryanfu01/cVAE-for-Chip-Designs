@@ -49,13 +49,24 @@ def main():
     lam_thermal = experiment.lambda_thermal.item()
     lam_sharpness = experiment.lambda_sharpness.item()
     lam_cohesion = experiment.lambda_cohesion.item()
-    
-    print(f"Lambda Overlap:   {lam_overlap:.4f}")
-    print(f"Lambda Area:      {lam_area:.4f}")
-    print(f"Lambda Thermal:   {lam_thermal:.4f}")
-    print(f"Lambda Sharpness: {lam_sharpness:.4f}")
-    print(f"Lambda Cohesion:  {lam_cohesion:.4f}")
-    print("---------------------------------------------\n")
+
+    is_vanilla = (lam_overlap==0 and lam_cohesion==0 and lam_area==0 and lam_sharpness==0 and lam_thermal==0)
+
+    if is_vanilla:
+        lam_overlap = 1
+        lam_area = 1
+        lam_thermal = 1
+        lam_sharpness = 1
+        lam_cohesion = 1
+        print(f"Vanilla Checkpoint Being Evaluated")
+    else:
+        print(f"Soft DRC Checkpoint Being Evaluated")
+        print(f"Lambda Overlap:   {lam_overlap:.4f}")
+        print(f"Lambda Area:      {lam_area:.4f}")
+        print(f"Lambda Thermal:   {lam_thermal:.4f}")
+        print(f"Lambda Sharpness: {lam_sharpness:.4f}")
+        print(f"Lambda Cohesion:  {lam_cohesion:.4f}")
+        print("---------------------------------------------\n")
 
     data = VAEDataset(**config["data_params"])
     data.setup()
